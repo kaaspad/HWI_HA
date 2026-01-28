@@ -26,7 +26,7 @@ A Home Assistant custom integration for Lutron Homeworks Series 4 and Series 8 l
 1. Open HACS in Home Assistant
 2. Click the three dots in the top right corner
 3. Select "Custom repositories"
-4. Add this repository URL: `https://github.com/your-username/HWI_HA`
+4. Add this repository URL: `https://github.com/kaaspad/HWI_HA`
 5. Select "Integration" as the category
 6. Click "Add"
 7. Search for "Lutron Homeworks" in HACS
