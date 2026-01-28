@@ -1,4 +1,3 @@
-
 class HomeworksException(Exception):
     pass
 

@@ -14,23 +14,15 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Callable
+from typing import Callable
 
 from . import commands
 from .exceptions import (
-    HomeworksConnectionFailed,
     HomeworksConnectionLost,
     HomeworksException,
 )
 from .messages import (
     AnyMessage,
-    ButtonEventMessage,
-    DimmerLevelMessage,
-    GrafikEyeSceneMessage,
-    KeypadEnableMessage,
-    KLSMessage,
-    SivoiaSceneMessage,
-    UnknownMessage,
 )
 from .protocol import MessageParser
 from .transport import HomeworksTransport
@@ -338,9 +330,7 @@ class HomeworksClient:
 
     async def keypad_button_hold(self, address: str, button: int) -> bool:
         """Simulate keypad button hold."""
-        return await self._transport.write(
-            commands.keypad_button_hold(address, button)
-        )
+        return await self._transport.write(commands.keypad_button_hold(address, button))
 
     async def keypad_button_double_tap(self, address: str, button: int) -> bool:
         """Simulate keypad button double-tap."""
@@ -359,9 +349,7 @@ class HomeworksClient:
         Returns:
             True if send succeeded
         """
-        return await self._transport.write(
-            commands.set_led(address, led_number, state)
-        )
+        return await self._transport.write(commands.set_led(address, led_number, state))
 
     async def grafik_eye_scene_select(self, address: str, scene: int) -> bool:
         """Select a GRAFIK Eye scene.
@@ -379,9 +367,7 @@ class HomeworksClient:
 
     async def request_grafik_eye_scene(self, address: str) -> bool:
         """Request current GRAFIK Eye scene."""
-        return await self._transport.write(
-            commands.request_grafik_eye_scene(address)
-        )
+        return await self._transport.write(commands.request_grafik_eye_scene(address))
 
     async def sivoia_scene_select(
         self, address: str, command: str, delay_time: float = 0.0

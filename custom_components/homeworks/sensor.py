@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 import logging
-from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -76,13 +75,9 @@ class HomeworksConnectionSensor(HomeworksHealthSensor):
     _attr_options = ["connected", "disconnected"]
     _attr_entity_registry_enabled_default = True  # This one is enabled by default
 
-    def __init__(
-        self, coordinator: HomeworksCoordinator, controller_id: str
-    ) -> None:
+    def __init__(self, coordinator: HomeworksCoordinator, controller_id: str) -> None:
         """Initialize the connection sensor."""
-        super().__init__(
-            coordinator, controller_id, "connection", "Connection Status"
-        )
+        super().__init__(coordinator, controller_id, "connection", "Connection Status")
 
     @property
     def native_value(self) -> str:
@@ -107,13 +102,9 @@ class HomeworksLastKLSTimeSensor(HomeworksHealthSensor):
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
 
-    def __init__(
-        self, coordinator: HomeworksCoordinator, controller_id: str
-    ) -> None:
+    def __init__(self, coordinator: HomeworksCoordinator, controller_id: str) -> None:
         """Initialize the last KLS time sensor."""
-        super().__init__(
-            coordinator, controller_id, "last_kls_time", "Last KLS Update"
-        )
+        super().__init__(coordinator, controller_id, "last_kls_time", "Last KLS Update")
 
     @property
     def native_value(self) -> datetime | None:
@@ -136,9 +127,7 @@ class HomeworksReconnectCountSensor(HomeworksHealthSensor):
 
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
-    def __init__(
-        self, coordinator: HomeworksCoordinator, controller_id: str
-    ) -> None:
+    def __init__(self, coordinator: HomeworksCoordinator, controller_id: str) -> None:
         """Initialize the reconnect count sensor."""
         super().__init__(
             coordinator, controller_id, "reconnect_count", "Reconnect Count"
@@ -165,9 +154,7 @@ class HomeworksPollFailureCountSensor(HomeworksHealthSensor):
 
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
-    def __init__(
-        self, coordinator: HomeworksCoordinator, controller_id: str
-    ) -> None:
+    def __init__(self, coordinator: HomeworksCoordinator, controller_id: str) -> None:
         """Initialize the poll failure count sensor."""
         super().__init__(
             coordinator, controller_id, "poll_failure_count", "Poll Failures"
@@ -194,9 +181,7 @@ class HomeworksParseErrorCountSensor(HomeworksHealthSensor):
 
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
-    def __init__(
-        self, coordinator: HomeworksCoordinator, controller_id: str
-    ) -> None:
+    def __init__(self, coordinator: HomeworksCoordinator, controller_id: str) -> None:
         """Initialize the parse error count sensor."""
         super().__init__(
             coordinator, controller_id, "parse_error_count", "Parse Errors"

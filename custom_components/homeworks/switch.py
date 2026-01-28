@@ -73,9 +73,7 @@ async def async_setup_entry(
             entities.append(entity)
 
         except Exception as err:
-            _LOGGER.error(
-                "Failed to create switch for %s: %s", device_config, err
-            )
+            _LOGGER.error("Failed to create switch for %s: %s", device_config, err)
 
     # Legacy CCOS format
     for cco_config in entry.options.get(CONF_CCOS, []):
@@ -106,9 +104,7 @@ async def async_setup_entry(
             entities.append(entity)
 
         except Exception as err:
-            _LOGGER.error(
-                "Failed to create legacy switch for %s: %s", cco_config, err
-            )
+            _LOGGER.error("Failed to create legacy switch for %s: %s", cco_config, err)
 
     if entities:
         _LOGGER.debug("Adding %d CCO switch entities", len(entities))

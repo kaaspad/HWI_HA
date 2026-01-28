@@ -27,13 +27,17 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady, ServiceValidationError
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+    ServiceValidationError,
+)
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import slugify
 
-from .client import HomeworksClient, HomeworksClientConfig
+from .client import HomeworksClientConfig
 from .const import (
     CONF_ADDR,
     CONF_BUTTON_NUMBER,
@@ -44,23 +48,20 @@ from .const import (
     CONF_DIMMERS,
     CONF_ENTITY_TYPE,
     CONF_INVERTED,
-    CONF_KEYPADS,
     CONF_KLS_POLL_INTERVAL,
     CONF_KLS_WINDOW_OFFSET,
     CONF_LOCKS,
-    CONF_RATE,
     CONF_RELAY_NUMBER,
     CCO_TYPE_COVER,
     CCO_TYPE_LIGHT,
     CCO_TYPE_LOCK,
     CCO_TYPE_SWITCH,
-    DEFAULT_FADE_RATE,
     DEFAULT_KLS_POLL_INTERVAL,
     DEFAULT_KLS_WINDOW_OFFSET,
     DOMAIN,
 )
 from .coordinator import HomeworksCoordinator
-from .models import CCOAddress, CCODevice, CCOEntityType, ControllerHealth, normalize_address
+from .models import CCOAddress, CCODevice, CCOEntityType, normalize_address
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -240,7 +241,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-def _register_cco_devices_from_options(coordinator: HomeworksCoordinator, options: dict[str, Any]) -> None:
+def _register_cco_devices_from_options(
+    coordinator: HomeworksCoordinator, options: dict[str, Any]
+) -> None:
     """Register CCO devices from the config entry options.
 
     Handles both new-style CCO_DEVICES and legacy CCOS/COVERS/LOCKS format.
@@ -252,7 +255,9 @@ def _register_cco_devices_from_options(coordinator: HomeworksCoordinator, option
             entity_type = _parse_entity_type(entity_type_str)
 
             addr_str = device_config[CONF_ADDR]
-            button = device_config.get(CONF_BUTTON_NUMBER, device_config.get(CONF_RELAY_NUMBER, 1))
+            button = device_config.get(
+                CONF_BUTTON_NUMBER, device_config.get(CONF_RELAY_NUMBER, 1)
+            )
 
             if "," not in addr_str:
                 full_addr = f"{addr_str},{button}"
@@ -395,7 +400,9 @@ class HomeworksEntity(Entity):
         self._controller_id = controller_id
         self._coordinator = coordinator
         self._attr_name = name
-        self._attr_unique_id = calculate_unique_id(self._controller_id, self._addr, self._idx)
+        self._attr_unique_id = calculate_unique_id(
+            self._controller_id, self._addr, self._idx
+        )
         self._attr_extra_state_attributes = {"homeworks_address": self._addr}
 
     @property

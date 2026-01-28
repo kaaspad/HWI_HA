@@ -29,9 +29,7 @@ from .models import (
     CCO_BUTTON_WINDOW_OFFSET,
     CCOAddress,
     CCODevice,
-    CCOEntityType,
     ControllerHealth,
-    KLSState,
     normalize_address,
 )
 
@@ -93,9 +91,7 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._dimmer_addresses: set[str] = set()
 
         # Event callbacks
-        self._button_callbacks: dict[
-            str, list[callable[[str, int, str], None]]
-        ] = {}
+        self._button_callbacks: dict[str, list[callable[[str, int, str], None]]] = {}
 
     @property
     def controller_id(self) -> str:
@@ -380,9 +376,9 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         normalized = normalize_address(address)
         callbacks = self._button_callbacks.get(normalized, [])
 
-        for callback in callbacks:
+        for cb in callbacks:
             try:
-                callback(normalized, button, event_type)
+                cb(normalized, button, event_type)
             except Exception as err:
                 _LOGGER.error("Button callback error: %s", err)
 
@@ -400,9 +396,7 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Open a CCO relay (turn off)."""
         if not self._client:
             return False
-        return await self._client.cco_open(
-            address.to_command_address(), address.button
-        )
+        return await self._client.cco_open(address.to_command_address(), address.button)
 
     async def async_fade_dim(
         self,
@@ -415,9 +409,7 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not self._client:
             return False
         normalized = normalize_address(address)
-        return await self._client.fade_dim(
-            level, fade_time, delay_time, normalized
-        )
+        return await self._client.fade_dim(level, fade_time, delay_time, normalized)
 
     async def async_request_dimmer_level(self, address: str) -> bool:
         """Request current dimmer level."""
@@ -426,18 +418,14 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         normalized = normalize_address(address)
         return await self._client.request_dimmer_level(normalized)
 
-    async def async_keypad_button_press(
-        self, address: str, button: int
-    ) -> bool:
+    async def async_keypad_button_press(self, address: str, button: int) -> bool:
         """Simulate a keypad button press."""
         if not self._client:
             return False
         normalized = normalize_address(address)
         return await self._client.keypad_button_press(normalized, button)
 
-    async def async_keypad_button_release(
-        self, address: str, button: int
-    ) -> bool:
+    async def async_keypad_button_release(self, address: str, button: int) -> bool:
         """Simulate a keypad button release."""
         if not self._client:
             return False
