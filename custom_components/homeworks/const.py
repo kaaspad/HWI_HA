@@ -37,6 +37,10 @@ CONF_COVERS: Final = "covers"
 # Lock-specific configuration
 CONF_LOCKS: Final = "locks"
 
+# Controller settings
+CONF_KLS_POLL_INTERVAL: Final = "kls_poll_interval"
+CONF_KLS_WINDOW_OFFSET: Final = "kls_window_offset"
+
 # Default values
 DEFAULT_FADE_RATE: Final = 1.0
 DEFAULT_BUTTON_NAME: Final = "Homeworks button"
@@ -50,6 +54,9 @@ DEFAULT_SWITCH_NAME: Final = "Homeworks Switch"
 # Polling intervals (in seconds)
 DEFAULT_KLS_POLL_INTERVAL: Final = 10
 DEFAULT_DIMMER_POLL_INTERVAL: Final = 30
+
+# KLS button window (0-indexed start of 8-button window in 24-digit KLS string)
+DEFAULT_KLS_WINDOW_OFFSET: Final = 9
 
 # CCO entity types for config flow
 CCO_TYPE_SWITCH: Final = "switch"

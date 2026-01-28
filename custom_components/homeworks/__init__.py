@@ -1,4 +1,9 @@
-"""Support for Lutron Homeworks Series 4 and 8 systems."""
+"""Support for Lutron Homeworks Series 4 and 8 systems.
+
+HA 2026.1 compliant:
+- Credentials (host, port, username, password) in entry.data
+- Non-secrets (devices, settings) in entry.options
+"""
 
 from __future__ import annotations
 
@@ -14,7 +19,6 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_HOST,
-    CONF_ID,
     CONF_NAME,
     CONF_PASSWORD,
     CONF_PORT,
@@ -23,7 +27,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
-from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady, ServiceValidationError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import ConfigType
@@ -41,6 +45,8 @@ from .const import (
     CONF_ENTITY_TYPE,
     CONF_INVERTED,
     CONF_KEYPADS,
+    CONF_KLS_POLL_INTERVAL,
+    CONF_KLS_WINDOW_OFFSET,
     CONF_LOCKS,
     CONF_RATE,
     CONF_RELAY_NUMBER,
@@ -50,18 +56,11 @@ from .const import (
     CCO_TYPE_SWITCH,
     DEFAULT_FADE_RATE,
     DEFAULT_KLS_POLL_INTERVAL,
+    DEFAULT_KLS_WINDOW_OFFSET,
     DOMAIN,
-    EVENT_BUTTON_PRESS,
-    EVENT_BUTTON_RELEASE,
 )
 from .coordinator import HomeworksCoordinator
-from .models import (
-    CCOAddress,
-    CCODevice,
-    CCOEntityType,
-    ControllerHealth,
-    normalize_address,
-)
+from .models import CCOAddress, CCODevice, CCOEntityType, ControllerHealth, normalize_address
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,7 +96,7 @@ class HomeworksData:
 
 @callback
 def async_setup_services(hass: HomeAssistant) -> None:
-    """Set up services for Lutron Homeworks Series 4 and 8 integration."""
+    """Set up services for Lutron Homeworks."""
 
     async def async_call_service(service_call: ServiceCall) -> None:
         """Call the service."""
@@ -115,12 +114,11 @@ async def async_send_command(hass: HomeAssistant, data: Mapping[str, Any]) -> No
     """Send command to a controller."""
 
     def get_controller_ids() -> list[str]:
-        """Get homeworks data for the specified controller ID."""
+        """Get controller IDs."""
         return [hw_data.controller_id for hw_data in hass.data[DOMAIN].values()]
 
     def get_homeworks_data(controller_id: str) -> HomeworksData | None:
-        """Get homeworks data for the specified controller ID."""
-        hw_data: HomeworksData
+        """Get homeworks data for controller ID."""
         for hw_data in hass.data[DOMAIN].values():
             if hw_data.controller_id == controller_id:
                 return hw_data
@@ -164,44 +162,61 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Homeworks from a config entry."""
+    """Set up Homeworks from a config entry.
+
+    Credentials are read from entry.data (secrets).
+    Devices and settings are read from entry.options (non-secrets).
+    """
     hass.data.setdefault(DOMAIN, {})
 
-    config = entry.options
-    controller_id = config[CONF_CONTROLLER_ID]
+    # Read credentials from entry.data
+    host = entry.data[CONF_HOST]
+    port = entry.data[CONF_PORT]
+    username = entry.data.get(CONF_USERNAME)
+    password = entry.data.get(CONF_PASSWORD)
+
+    # Read non-secrets from entry.options
+    options = entry.options
+    controller_id = options.get(CONF_CONTROLLER_ID, slugify(entry.title))
 
     # Build client config
-    login_secret: str | None = None
-    if CONF_PASSWORD in config and config.get(CONF_PASSWORD):
-        login_secret = f"{config.get(CONF_USERNAME, '')}, {config[CONF_PASSWORD]}"
-    elif CONF_USERNAME in config and config.get(CONF_USERNAME):
-        login_secret = config[CONF_USERNAME]
-
     client_config = HomeworksClientConfig(
-        host=config[CONF_HOST],
-        port=config[CONF_PORT],
-        username=config.get(CONF_USERNAME),
-        password=config.get(CONF_PASSWORD),
+        host=host,
+        port=port,
+        username=username,
+        password=password,
     )
+
+    # Get poll interval and window offset from options
+    kls_poll_interval = options.get(CONF_KLS_POLL_INTERVAL, DEFAULT_KLS_POLL_INTERVAL)
+    kls_window_offset = options.get(CONF_KLS_WINDOW_OFFSET, DEFAULT_KLS_WINDOW_OFFSET)
 
     # Create coordinator
     coordinator = HomeworksCoordinator(
         hass=hass,
         config=client_config,
         controller_id=controller_id,
-        kls_poll_interval=timedelta(seconds=DEFAULT_KLS_POLL_INTERVAL),
+        kls_poll_interval=timedelta(seconds=kls_poll_interval),
+        kls_window_offset=kls_window_offset,
     )
 
-    # Register CCO devices from config
-    _register_cco_devices_from_config(coordinator, config)
+    # Register CCO devices from options
+    _register_cco_devices_from_options(coordinator, options)
 
     # Register dimmers
-    for dimmer in config.get(CONF_DIMMERS, []):
+    for dimmer in options.get(CONF_DIMMERS, []):
         coordinator.register_dimmer(dimmer[CONF_ADDR])
 
     # Connect and start coordinator
-    if not await coordinator.async_setup():
-        raise ConfigEntryNotReady("Failed to connect to Homeworks controller")
+    try:
+        if not await coordinator.async_setup():
+            raise ConfigEntryNotReady("Failed to connect to Homeworks controller")
+    except Exception as err:
+        _LOGGER.error("Failed to setup Homeworks: %s", err)
+        # Check if this is an auth failure
+        if "auth" in str(err).lower() or "credential" in str(err).lower():
+            raise ConfigEntryAuthFailed("Authentication failed") from err
+        raise ConfigEntryNotReady(f"Connection failed: {err}") from err
 
     # Store data
     hass.data[DOMAIN][entry.entry_id] = HomeworksData(
@@ -216,9 +231,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def cleanup(event: Event) -> None:
         await coordinator.async_shutdown()
 
-    entry.async_on_unload(
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, cleanup)
-    )
+    entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, cleanup))
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     # Start the coordinator's regular updates
@@ -227,24 +240,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-def _register_cco_devices_from_config(
-    coordinator: HomeworksCoordinator, config: dict[str, Any]
-) -> None:
+def _register_cco_devices_from_options(coordinator: HomeworksCoordinator, options: dict[str, Any]) -> None:
     """Register CCO devices from the config entry options.
 
     Handles both new-style CCO_DEVICES and legacy CCOS/COVERS/LOCKS format.
     """
     # New-style unified CCO devices
-    for device_config in config.get(CONF_CCO_DEVICES, []):
+    for device_config in options.get(CONF_CCO_DEVICES, []):
         try:
             entity_type_str = device_config.get(CONF_ENTITY_TYPE, CCO_TYPE_SWITCH)
             entity_type = _parse_entity_type(entity_type_str)
 
-            # Parse address with button
             addr_str = device_config[CONF_ADDR]
             button = device_config.get(CONF_BUTTON_NUMBER, device_config.get(CONF_RELAY_NUMBER, 1))
 
-            # Build full address string
             if "," not in addr_str:
                 full_addr = f"{addr_str},{button}"
             else:
@@ -263,13 +272,12 @@ def _register_cco_devices_from_config(
             _LOGGER.error("Failed to register CCO device: %s - %s", device_config, err)
 
     # Legacy CCO format (switches)
-    for cco_config in config.get(CONF_CCOS, []):
+    for cco_config in options.get(CONF_CCOS, []):
         try:
             addr = normalize_address(cco_config[CONF_ADDR])
             relay = cco_config.get(CONF_RELAY_NUMBER, 1)
-
-            # Construct CCO address
             parts = addr.strip("[]").split(":")
+
             address = CCOAddress(
                 processor=int(parts[0]),
                 link=int(parts[1]),
@@ -288,12 +296,11 @@ def _register_cco_devices_from_config(
             _LOGGER.error("Failed to register legacy CCO: %s - %s", cco_config, err)
 
     # Legacy covers
-    for cover_config in config.get(CONF_COVERS, []):
+    for cover_config in options.get(CONF_COVERS, []):
         try:
             addr = normalize_address(cover_config[CONF_ADDR])
             parts = addr.strip("[]").split(":")
 
-            # Covers typically use button 1 for control
             address = CCOAddress(
                 processor=int(parts[0]),
                 link=int(parts[1]),
@@ -312,7 +319,7 @@ def _register_cco_devices_from_config(
             _LOGGER.error("Failed to register legacy cover: %s - %s", cover_config, err)
 
     # Legacy locks
-    for lock_config in config.get(CONF_LOCKS, []):
+    for lock_config in options.get(CONF_LOCKS, []):
         try:
             addr = normalize_address(lock_config[CONF_ADDR])
             relay = lock_config.get(CONF_RELAY_NUMBER, 1)
@@ -388,9 +395,7 @@ class HomeworksEntity(Entity):
         self._controller_id = controller_id
         self._coordinator = coordinator
         self._attr_name = name
-        self._attr_unique_id = calculate_unique_id(
-            self._controller_id, self._addr, self._idx
-        )
+        self._attr_unique_id = calculate_unique_id(self._controller_id, self._addr, self._idx)
         self._attr_extra_state_attributes = {"homeworks_address": self._addr}
 
     @property

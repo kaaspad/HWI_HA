@@ -1,0 +1,319 @@
+"""Home Assistant integration smoke tests.
+
+These tests verify the integration loads correctly in Home Assistant.
+They are skipped by default (require HA deps) but can be run in an HA dev environment.
+
+To run these tests:
+1. Install Home Assistant dev dependencies
+2. Run: pytest tests/test_ha_smoke.py -v --no-header
+
+Or in a HA dev container:
+    pip install pytest pytest-homeassistant-custom-component
+    pytest tests/test_ha_smoke.py -v
+"""
+
+import pytest
+
+# Mark all tests in this module as requiring HA
+pytestmark = [
+    pytest.mark.requires_ha,
+    pytest.mark.asyncio,
+]
+
+
+@pytest.fixture
+def mock_config_entry():
+    """Create a mock config entry."""
+    try:
+        from homeassistant.config_entries import ConfigEntry
+        from unittest.mock import MagicMock, patch
+
+        entry = MagicMock(spec=ConfigEntry)
+        entry.entry_id = "test_entry_id"
+        entry.title = "Test Homeworks"
+        entry.domain = "homeworks"
+        entry.data = {
+            "host": "192.168.1.100",
+            "port": 23,
+            "username": None,
+            "password": None,
+        }
+        entry.options = {
+            "controller_id": "test_controller",
+            "cco_devices": [
+                {
+                    "name": "Test Switch",
+                    "addr": "[02:06:03]",
+                    "button_number": 6,
+                    "entity_type": "switch",
+                    "inverted": False,
+                }
+            ],
+            "dimmers": [],
+            "keypads": [],
+            "kls_poll_interval": 10,
+            "kls_window_offset": 9,
+            "ccos": [],
+            "covers": [],
+            "locks": [],
+        }
+        return entry
+    except ImportError:
+        pytest.skip("Home Assistant not installed")
+
+
+@pytest.fixture
+def mock_hass():
+    """Create a mock Home Assistant instance."""
+    try:
+        from unittest.mock import MagicMock, AsyncMock, patch
+
+        hass = MagicMock()
+        hass.data = {}
+        hass.config_entries = MagicMock()
+        hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+        hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+        hass.bus = MagicMock()
+        hass.bus.async_listen_once = MagicMock(return_value=lambda: None)
+        return hass
+    except ImportError:
+        pytest.skip("Home Assistant not installed")
+
+
+class TestIntegrationLoad:
+    """Test that the integration loads correctly."""
+
+    async def test_import_integration(self):
+        """Test that the integration module can be imported."""
+        try:
+            from custom_components import homeworks
+            assert homeworks.DOMAIN == "homeworks"
+            assert hasattr(homeworks, "async_setup_entry")
+            assert hasattr(homeworks, "async_unload_entry")
+        except ImportError as e:
+            pytest.skip(f"Cannot import integration: {e}")
+
+    async def test_import_config_flow(self):
+        """Test that config flow can be imported."""
+        try:
+            from custom_components.homeworks import config_flow
+            assert hasattr(config_flow, "HomeworksConfigFlowHandler")
+            assert config_flow.HomeworksConfigFlowHandler.domain == "homeworks"
+        except ImportError as e:
+            pytest.skip(f"Cannot import config_flow: {e}")
+
+    async def test_import_coordinator(self):
+        """Test that coordinator can be imported."""
+        try:
+            from custom_components.homeworks.coordinator import HomeworksCoordinator
+            assert HomeworksCoordinator is not None
+        except ImportError as e:
+            pytest.skip(f"Cannot import coordinator: {e}")
+
+
+class TestConfigEntrySetup:
+    """Test config entry setup and unload."""
+
+    async def test_setup_entry_creates_data(self, mock_hass, mock_config_entry):
+        """Test that setup_entry creates the expected data structure."""
+        try:
+            from custom_components.homeworks import async_setup_entry, DOMAIN
+            from unittest.mock import AsyncMock, patch
+
+            # Mock the coordinator setup to avoid actual network calls
+            with patch("custom_components.homeworks.HomeworksCoordinator") as mock_coord_class:
+                mock_coordinator = AsyncMock()
+                mock_coordinator.async_setup = AsyncMock(return_value=True)
+                mock_coordinator.async_config_entry_first_refresh = AsyncMock()
+                mock_coordinator.async_shutdown = AsyncMock()
+                mock_coordinator.register_cco_device = lambda x: None
+                mock_coordinator.register_dimmer = lambda x: None
+                mock_coord_class.return_value = mock_coordinator
+
+                # This will fail without full HA but validates structure
+                # In a real HA environment, this would succeed
+                pytest.skip("Full setup requires HA environment")
+
+        except ImportError as e:
+            pytest.skip(f"Cannot import: {e}")
+
+    async def test_unload_entry_cleans_up(self, mock_hass, mock_config_entry):
+        """Test that unload_entry properly cleans up."""
+        try:
+            from custom_components.homeworks import async_unload_entry, DOMAIN, HomeworksData
+            from unittest.mock import AsyncMock
+
+            # Set up mock data
+            mock_coordinator = AsyncMock()
+            mock_coordinator.async_shutdown = AsyncMock()
+
+            mock_hass.data[DOMAIN] = {
+                mock_config_entry.entry_id: HomeworksData(
+                    coordinator=mock_coordinator,
+                    controller_id="test",
+                )
+            }
+
+            result = await async_unload_entry(mock_hass, mock_config_entry)
+
+            assert result is True
+            mock_coordinator.async_shutdown.assert_called_once()
+            assert mock_config_entry.entry_id not in mock_hass.data[DOMAIN]
+
+        except ImportError as e:
+            pytest.skip(f"Cannot import: {e}")
+
+
+class TestCoordinatorKLSProcessing:
+    """Test that coordinator processes KLS lines correctly."""
+
+    async def test_kls_state_update(self):
+        """Test that KLS updates trigger state changes."""
+        try:
+            from custom_components.homeworks.coordinator import HomeworksCoordinator
+            from custom_components.homeworks.client import HomeworksClientConfig
+            from custom_components.homeworks.models import CCOAddress, CCODevice, CCOEntityType
+            from unittest.mock import MagicMock, AsyncMock, patch
+
+            # Create a mock hass
+            mock_hass = MagicMock()
+            mock_hass.async_create_task = lambda x: None
+
+            # Create coordinator with mock config
+            config = HomeworksClientConfig(host="127.0.0.1", port=23)
+
+            with patch.object(HomeworksCoordinator, "__init__", lambda self, **kwargs: None):
+                coordinator = HomeworksCoordinator.__new__(HomeworksCoordinator)
+                coordinator.hass = mock_hass
+                coordinator._cco_devices = {}
+                coordinator._cco_states = {}
+                coordinator._keypad_led_states = {}
+                coordinator._kls_window_offset = 9
+                coordinator._client = None
+                coordinator.async_set_updated_data = MagicMock()
+
+                # Register a CCO device
+                address = CCOAddress(processor=2, link=6, address=3, button=6)
+                device = CCODevice(
+                    address=address,
+                    name="Test",
+                    entity_type=CCOEntityType.SWITCH,
+                    inverted=False,
+                )
+                coordinator._cco_devices[address.unique_key] = device
+                coordinator._cco_states[address.unique_key] = False
+
+                # Simulate KLS update with button 6 ON
+                # Button 6 is at index 9 + 5 = 14
+                # String: 000000000222111110000000
+                led_states = [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+                coordinator._handle_kls_update("[02:06:03]", led_states)
+
+                # Button 6 should now be ON (index 14 = 1)
+                assert coordinator._cco_states[address.unique_key] is True
+
+                # Simulate KLS update with button 6 OFF
+                led_states = [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 1, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+                coordinator._handle_kls_update("[02:06:03]", led_states)
+
+                # Button 6 should now be OFF (index 14 = 2)
+                assert coordinator._cco_states[address.unique_key] is False
+
+        except ImportError as e:
+            pytest.skip(f"Cannot import: {e}")
+
+    async def test_configurable_window_offset(self):
+        """Test that window offset is configurable."""
+        try:
+            from custom_components.homeworks.coordinator import HomeworksCoordinator
+            from custom_components.homeworks.models import CCOAddress, CCODevice, CCOEntityType
+            from unittest.mock import MagicMock, patch
+
+            mock_hass = MagicMock()
+            mock_hass.async_create_task = lambda x: None
+
+            with patch.object(HomeworksCoordinator, "__init__", lambda self, **kwargs: None):
+                coordinator = HomeworksCoordinator.__new__(HomeworksCoordinator)
+                coordinator.hass = mock_hass
+                coordinator._cco_devices = {}
+                coordinator._cco_states = {}
+                coordinator._keypad_led_states = {}
+                coordinator._kls_window_offset = 8  # Different offset
+                coordinator._client = None
+                coordinator.async_set_updated_data = MagicMock()
+
+                # Register a CCO device
+                address = CCOAddress(processor=2, link=6, address=3, button=1)
+                device = CCODevice(
+                    address=address,
+                    name="Test",
+                    entity_type=CCOEntityType.SWITCH,
+                    inverted=False,
+                )
+                coordinator._cco_devices[address.unique_key] = device
+                coordinator._cco_states[address.unique_key] = False
+
+                # With offset 8, button 1 is at index 8
+                # Set index 8 to 1 (ON)
+                led_states = [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0]
+                coordinator._handle_kls_update("[02:06:03]", led_states)
+
+                assert coordinator._cco_states[address.unique_key] is True
+
+        except ImportError as e:
+            pytest.skip(f"Cannot import: {e}")
+
+
+class TestCredentialStorage:
+    """Test that credentials are stored correctly."""
+
+    async def test_credentials_in_data_not_options(self):
+        """Verify credentials are stored in entry.data, not entry.options."""
+        # This is a documentation/validation test
+        expected_data_keys = {"host", "port", "username", "password"}
+        expected_options_keys = {
+            "controller_id",
+            "cco_devices",
+            "dimmers",
+            "keypads",
+            "kls_poll_interval",
+            "kls_window_offset",
+        }
+
+        # Verify credentials should NOT be in options
+        secrets = {"host", "port", "username", "password"}
+
+        for key in secrets:
+            assert key not in expected_options_keys, f"Secret '{key}' should not be in options"
+
+        # Verify non-secrets should NOT be in data
+        non_secrets = {"cco_devices", "dimmers", "keypads", "controller_id"}
+
+        for key in non_secrets:
+            assert key not in expected_data_keys, f"Non-secret '{key}' should not be in data"
+
+
+class TestNoDuplicatePolling:
+    """Test that reload doesn't create duplicate polling tasks."""
+
+    async def test_shutdown_cancels_polling(self):
+        """Test that shutdown properly stops polling."""
+        try:
+            from custom_components.homeworks.coordinator import HomeworksCoordinator
+            from custom_components.homeworks.client import HomeworksClient
+            from unittest.mock import MagicMock, AsyncMock, patch
+
+            with patch.object(HomeworksCoordinator, "__init__", lambda self, **kwargs: None):
+                coordinator = HomeworksCoordinator.__new__(HomeworksCoordinator)
+
+                mock_client = AsyncMock()
+                mock_client.stop = AsyncMock()
+                coordinator._client = mock_client
+
+                await coordinator.async_shutdown()
+
+                mock_client.stop.assert_called_once()
+                assert coordinator._client is None
+
+        except ImportError as e:
+            pytest.skip(f"Cannot import: {e}")

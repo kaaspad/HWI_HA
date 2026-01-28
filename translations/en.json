@@ -1,348 +1,333 @@
 {
     "config": {
-        "abort": {
-            "already_configured": "Device is already configured",
-            "already_in_progress": "[%key:common::config_flow::abort::already_in_progress%]",
-            "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]",
-            "duplicated_host_port": "A device with this host and port is already configured",
-            "duplicated_controller_id": "A device with this controller ID is already configured"
-        },
-        "error": {
-            "cannot_connect": "Failed to connect",
-            "connection_error": "Failed to connect",
-            "credentials_needed": "Credentials are required",
-            "duplicated_addr": "Address already exists",
-            "duplicated_controller_id": "This controller ID is already configured",
-            "duplicated_host_port": "This host and port combination is already configured",
-            "duplicated_number": "Button number already exists",
-            "invalid_addr": "Invalid address format",
-            "invalid_credentials": "Invalid authentication",
-            "invalid_csv": "Invalid CSV format",
-            "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error",
-            "unknown_error": "Unexpected error"
-        },
         "step": {
-            "import_controller_name": {
+            "user": {
+                "title": "Connect to Lutron Homeworks Controller",
+                "description": "Enter the connection details for your Homeworks processor.",
                 "data": {
-                    "name": "[%key:component::homeworks::config::step::user::data::name%]"
+                    "name": "Controller name",
+                    "host": "Host",
+                    "port": "Port",
+                    "username": "Username (optional)",
+                    "password": "Password (optional)"
                 },
                 "data_description": {
-                    "name": "[%key:component::homeworks::config::step::user::data_description::name%]"
-                },
-                "description": "Lutron Homeworks is no longer configured through configuration.yaml.\n\nPlease fill in the form to import the existing configuration to the UI."
+                    "name": "A friendly name for this controller",
+                    "host": "IP address or hostname of the processor",
+                    "port": "TCP port (typically 23 for telnet)",
+                    "username": "Login username if authentication is enabled",
+                    "password": "Login password if authentication is enabled"
+                }
             },
-            "import_finish": {
-                "description": "The existing YAML configuration has succesfully been imported.\n\nYou can now remove the `homeworks` configuration from your configuration.yaml file."
+            "reauth_confirm": {
+                "title": "Re-authenticate Homeworks Controller",
+                "description": "The controller at {host} requires updated credentials.",
+                "data": {
+                    "username": "Username",
+                    "password": "Password"
+                }
             },
             "reconfigure": {
-                "title": "Reconfigure Lutron Homeworks controller",
+                "title": "Reconfigure Homeworks Controller",
+                "description": "Update the connection settings for this controller.",
                 "data": {
                     "host": "Host",
                     "port": "Port",
                     "username": "Username",
                     "password": "Password"
                 }
-            },
+            }
+        },
+        "error": {
+            "connection_error": "Failed to connect to controller. Check host and port.",
+            "invalid_credentials": "Invalid username or password",
+            "credentials_needed": "This controller requires authentication",
+            "duplicated_host_port": "A controller with this host and port is already configured",
+            "duplicated_controller_id": "A controller with this name already exists",
+            "unknown_error": "An unexpected error occurred"
+        },
+        "abort": {
+            "already_configured": "This controller is already configured",
+            "already_in_progress": "Configuration is already in progress",
+            "reconfigure_successful": "Controller reconfigured successfully",
+            "reauth_successful": "Re-authentication successful"
+        }
+    },
+    "options": {
+        "step": {
             "init": {
-                "title": "Connect to Lutron Homeworks",
-                "data": {
-                    "host": "Host",
-                    "port": "Port",
-                    "username": "Username",
-                    "password": "Password"
+                "title": "Lutron Homeworks Options",
+                "description": "Configure devices and settings for your Homeworks system.",
+                "menu_options": {
+                    "manage_cco_devices": "Manage CCO devices (switches, lights, covers, locks)",
+                    "manage_dimmers": "Manage dimmable lights",
+                    "manage_keypads": "Manage keypads",
+                    "controller_settings": "Controller settings",
+                    "import_csv": "Import devices from CSV",
+                    "review_config": "Review configuration"
                 }
             },
-            "user": {
-                "title": "Connect to the Lutron Homeworks controller",
-                "data": {
-                    "name": "Name",
-                    "host": "Host",
-                    "port": "Port",
-                    "username": "Username",
-                    "password": "Password"
+            "manage_cco_devices": {
+                "title": "CCO Device Management",
+                "description": "CCO devices are relay-controlled outputs (switches, on/off lights, covers, locks).",
+                "menu_options": {
+                    "add_cco_device": "Add CCO device",
+                    "select_edit_cco_device": "Edit CCO device",
+                    "remove_cco_device": "Remove CCO device"
                 }
             },
-            "discover": {
-                "title": "Select devices to add",
-                "data": {
-                    "keypads": "Keypads",
-                    "dimmers": "Dimmers",
-                    "ccos": "CCOs",
-                    "covers": "Covers",
-                    "lights": "Lights"
+            "manage_dimmers": {
+                "title": "Dimmable Light Management",
+                "description": "Dimmable lights support brightness control (RPM, D48, H48, RF dimmers).",
+                "menu_options": {
+                    "add_light": "Add dimmable light",
+                    "select_edit_light": "Edit dimmable light",
+                    "remove_light": "Remove dimmable light"
                 }
             },
-            "add_button": {
-                "title": "Add Button",
-                "data": {
-                    "name": "Name",
-                    "number": "Button Number",
-                    "led": "LED Feedback",
-                    "release_delay": "Release Delay"
+            "manage_keypads": {
+                "title": "Keypad Management",
+                "description": "Keypads provide button events and LED status feedback.",
+                "menu_options": {
+                    "add_keypad": "Add keypad",
+                    "select_edit_keypad": "Edit keypad",
+                    "remove_keypad": "Remove keypad"
                 }
             },
-            "add_cco": {
-                "title": "Add CCO",
+            "add_cco_device": {
+                "title": "Add CCO Device",
+                "description": "CCO devices use relay outputs. The address identifies the keypad/CCO module, and the button number identifies which relay (1-8 for CCO, 1-24 for keypads).",
                 "data": {
-                    "name": "Name",
-                    "addr": "Address",
-                    "relay_number": "Relay Number"
+                    "name": "Device name",
+                    "addr": "CCO/Keypad address",
+                    "button_number": "Button/Relay number",
+                    "entity_type": "Device type",
+                    "inverted": "Invert on/off"
+                },
+                "data_description": {
+                    "addr": "Address in format [processor:link:address] (e.g., [02:06:03])",
+                    "button_number": "Relay number 1-8 for CCO modules, 1-24 for keypads",
+                    "entity_type": "How this device appears in Home Assistant",
+                    "inverted": "Swap on/off semantics (useful for normally-closed relays)"
                 }
             },
-            "add_cover": {
-                "title": "Add Cover",
+            "select_edit_cco_device": {
+                "title": "Select CCO Device to Edit",
                 "data": {
-                    "name": "Name",
-                    "addr": "Address",
-                    "led_addr": "LED Address",
-                    "led_number": "LED Number"
+                    "index": "Device"
+                }
+            },
+            "edit_cco_device": {
+                "title": "Edit CCO Device",
+                "description": "Modify the device settings. Changing address or button will update the KLS polling.",
+                "data": {
+                    "name": "Device name",
+                    "addr": "CCO/Keypad address",
+                    "button_number": "Button/Relay number",
+                    "entity_type": "Device type",
+                    "inverted": "Invert on/off"
+                }
+            },
+            "remove_cco_device": {
+                "title": "Remove CCO Devices",
+                "description": "Select devices to remove. Associated entities will be deleted.",
+                "data": {
+                    "index": "Devices to remove"
+                }
+            },
+            "add_light": {
+                "title": "Add Dimmable Light",
+                "description": "For dimmers with brightness control. Use CCO devices for on/off-only lights.",
+                "data": {
+                    "name": "Light name",
+                    "addr": "Dimmer address",
+                    "rate": "Fade rate"
+                },
+                "data_description": {
+                    "addr": "Dimmer address (varies by type: RPM, D48, H48, RF)",
+                    "rate": "Time in seconds to fade to new brightness level"
+                }
+            },
+            "select_edit_light": {
+                "title": "Select Light to Edit",
+                "data": {
+                    "index": "Light"
+                }
+            },
+            "edit_light": {
+                "title": "Edit Dimmable Light",
+                "data": {
+                    "name": "Light name",
+                    "rate": "Fade rate"
+                }
+            },
+            "remove_light": {
+                "title": "Remove Dimmable Lights",
+                "description": "Select lights to remove.",
+                "data": {
+                    "index": "Lights to remove"
                 }
             },
             "add_keypad": {
                 "title": "Add Keypad",
+                "description": "Add a keypad to receive button events and monitor LED states.",
                 "data": {
-                    "name": "Name",
-                    "addr": "Address"
-                }
-            },
-            "add_light": {
-                "title": "Add Light",
-                "data": {
-                    "name": "Name",
-                    "addr": "Address",
-                    "rate": "Fade Rate"
-                }
-            },
-            "remove_button": {
-                "title": "Remove Button",
-                "data": {
-                    "index": "Select buttons to remove"
-                }
-            },
-            "remove_cco": {
-                "title": "Remove CCO",
-                "data": {
-                    "index": "Select CCOs to remove"
-                }
-            },
-            "remove_cover": {
-                "title": "Remove Cover",
-                "data": {
-                    "index": "Select covers to remove"
-                }
-            },
-            "remove_keypad": {
-                "title": "Remove Keypad",
-                "data": {
-                    "index": "Select keypads to remove"
-                }
-            },
-            "remove_light": {
-                "title": "Remove Light",
-                "data": {
-                    "index": "Select lights to remove"
-                }
-            },
-            "select_edit_button": {
-                "title": "Configure button",
-                "data": {
-                    "buttons": "Buttons"
-                }
-            },
-            "select_edit_cco": {
-                "title": "Configure CCO",
-                "data": {
-                    "ccos": "CCOs"
-                }
-            },
-            "select_edit_cover": {
-                "title": "Configure cover",
-                "data": {
-                    "covers": "Covers"
+                    "name": "Keypad name",
+                    "addr": "Keypad address"
+                },
+                "data_description": {
+                    "addr": "Address in format [processor:link:address]"
                 }
             },
             "select_edit_keypad": {
-                "title": "Configure keypad",
+                "title": "Select Keypad to Edit",
                 "data": {
-                    "keypads": "Keypads"
+                    "index": "Keypad"
                 }
             },
-            "select_edit_light": {
-                "title": "Configure light",
+            "edit_keypad": {
+                "title": "Edit Keypad",
+                "description": "Configure buttons for this keypad.",
+                "menu_options": {
+                    "add_button": "Add button",
+                    "select_edit_button": "Edit button",
+                    "remove_button": "Remove button"
+                }
+            },
+            "remove_keypad": {
+                "title": "Remove Keypads",
+                "description": "Select keypads to remove. All associated buttons will also be removed.",
                 "data": {
-                    "lights": "Lights"
+                    "index": "Keypads to remove"
+                }
+            },
+            "add_button": {
+                "title": "Add Button",
+                "description": "Add a button to the keypad.",
+                "data": {
+                    "name": "Button name",
+                    "number": "Button number",
+                    "led": "Has LED indicator",
+                    "release_delay": "Release delay"
+                },
+                "data_description": {
+                    "number": "Physical button number (1-24)",
+                    "led": "Enable LED state tracking for this button",
+                    "release_delay": "Delay in seconds before sending release event"
+                }
+            },
+            "select_edit_button": {
+                "title": "Select Button to Edit",
+                "data": {
+                    "index": "Button"
+                }
+            },
+            "edit_button": {
+                "title": "Edit Button",
+                "data": {
+                    "name": "Button name",
+                    "led": "Has LED indicator",
+                    "release_delay": "Release delay"
+                }
+            },
+            "remove_button": {
+                "title": "Remove Buttons",
+                "data": {
+                    "index": "Buttons to remove"
+                }
+            },
+            "controller_settings": {
+                "title": "Controller Settings",
+                "description": "Configure protocol-level settings for this controller.",
+                "data": {
+                    "kls_poll_interval": "KLS poll interval",
+                    "kls_window_offset": "KLS button window offset"
+                },
+                "data_description": {
+                    "kls_poll_interval": "How often to poll KLS state for CCO devices (seconds)",
+                    "kls_window_offset": "Starting index of the 8-button window in the 24-digit KLS string (default: 9)"
+                }
+            },
+            "import_csv": {
+                "title": "Import Devices from CSV",
+                "description": "Paste CSV content with columns: device_type, address, relay/button, name.\n\nSupported device_type values: CCO, SWITCH, LIGHT, DIMMER, COVER, LOCK",
+                "data": {
+                    "csv_file": "CSV content"
+                }
+            },
+            "confirm_import": {
+                "title": "Confirm Device Import",
+                "description": "Select which devices to import.",
+                "data": {
+                    "devices": "Devices to import"
+                }
+            },
+            "review_config": {
+                "title": "Current Configuration",
+                "description": "Review your current device configuration. Use the other menu options to make changes."
+            }
+        },
+        "error": {
+            "invalid_addr": "Invalid address format. Use [processor:link:address] (e.g., [02:06:03])",
+            "duplicated_addr": "This address is already configured",
+            "duplicate_cco": "This CCO address and button combination already exists",
+            "duplicated_number": "This button number is already used on this keypad",
+            "invalid_csv": "Invalid CSV format. Check that all required columns are present.",
+            "no_devices_in_csv": "No valid devices found in CSV",
+            "no_devices": "No devices configured. Add devices first.",
+            "no_buttons": "No buttons configured on this keypad. Add buttons first.",
+            "connection_error": "Failed to connect to controller"
+        }
+    },
+    "selector": {
+        "cco_entity_type": {
+            "options": {
+                "switch": "Switch (on/off)",
+                "light": "Light (on/off)",
+                "cover": "Cover (open/close)",
+                "lock": "Lock (lock/unlock)"
+            }
+        }
+    },
+    "services": {
+        "send_command": {
+            "name": "Send command",
+            "description": "Send raw command(s) to a Homeworks controller. Use 'delay X' to pause X milliseconds between commands.",
+            "fields": {
+                "controller_id": {
+                    "name": "Controller ID",
+                    "description": "The controller to send the command to"
+                },
+                "command": {
+                    "name": "Command",
+                    "description": "Command(s) to send. Can be a single command or list of commands."
                 }
             }
         }
     },
     "exceptions": {
         "invalid_controller_id": {
-            "message": "Invalid controller_id \"{controller_id}\", expected one of \"{controller_ids}\""
+            "message": "Controller '{controller_id}' not found. Available controllers: {controller_ids}"
+        },
+        "not_connected": {
+            "message": "Controller is not connected"
         }
     },
-    "options": {
-        "error": {
-            "duplicated_addr": "The specified address is already in use",
-            "duplicated_number": "The specified number is already in use",
-            "invalid_addr": "Invalid address",
-            "discovery_failed": "Device discovery failed",
-            "invalid_csv": "Invalid CSV file format"
-        },
-        "step": {
-            "init": {
-                "title": "Lutron Homeworks Options",
-                "menu_options": {
-                    "import_csv": "Import from CSV",
-                    "add_keypad": "Add Keypad",
-                    "select_edit_keypad": "Edit Keypad",
-                    "remove_keypad": "Remove Keypad",
-                    "add_light": "Add Light",
-                    "select_edit_light": "Edit Light",
-                    "remove_light": "Remove Light",
-                    "add_cco": "Add CCO",
-                    "remove_cco": "Remove CCO",
-                    "select_edit_cco": "Edit CCO",
-                    "add_cover": "Add Cover",
-                    "remove_cover": "Remove Cover",
-                    "select_edit_cover": "Edit Cover"
-                }
+    "entity": {
+        "sensor": {
+            "connection_status": {
+                "name": "Connection status"
             },
-            "import_csv": {
-                "title": "Import Devices from CSV",
-                "data": {
-                    "csv_file": "CSV Content"
-                }
+            "last_message": {
+                "name": "Last message"
             },
-            "confirm_import": {
-                "title": "Confirm Device Import",
-                "data": {
-                    "devices": "Select devices to import"
-                }
-            },
-            "add_keypad": {
-                "title": "Add Keypad",
-                "data": {
-                    "name": "Name",
-                    "addr": "Address"
-                }
-            },
-            "edit_keypad": {
-                "title": "Edit Keypad",
-                "menu_options": {
-                    "add_button": "Add Button",
-                    "select_edit_button": "Edit Button",
-                    "remove_button": "Remove Button"
-                }
-            },
-            "add_button": {
-                "title": "Add Button",
-                "data": {
-                    "name": "Name",
-                    "number": "Button Number",
-                    "led": "LED Feedback",
-                    "release_delay": "Release Delay"
-                }
-            },
-            "edit_button": {
-                "title": "Edit Button",
-                "data": {
-                    "led": "LED Feedback",
-                    "release_delay": "Release Delay"
-                }
-            },
-            "remove_button": {
-                "title": "Remove Button",
-                "data": {
-                    "index": "Select buttons to remove"
-                }
-            },
-            "remove_keypad": {
-                "title": "Remove Keypad",
-                "data": {
-                    "index": "Select keypads to remove"
-                }
-            },
-            "add_light": {
-                "title": "Add Light",
-                "data": {
-                    "name": "Name",
-                    "addr": "Address",
-                    "rate": "Fade Rate"
-                }
-            },
-            "edit_light": {
-                "title": "Edit Light",
-                "data": {
-                    "rate": "Fade Rate"
-                }
-            },
-            "remove_light": {
-                "title": "Remove Light",
-                "data": {
-                    "index": "Select lights to remove"
-                }
-            },
-            "add_cco": {
-                "title": "Add CCO",
-                "data": {
-                    "name": "Name",
-                    "addr": "Address",
-                    "relay_number": "Relay Number"
-                }
-            },
-            "remove_cco": {
-                "title": "Remove CCO",
-                "data": {
-                    "index": "Select CCOs to remove"
-                }
-            },
-            "add_cover": {
-                "title": "Add Cover",
-                "data": {
-                    "name": "Name",
-                    "addr": "Address",
-                    "led_addr": "LED Address",
-                    "led_number": "LED Number"
-                }
-            },
-            "remove_cover": {
-                "title": "Remove Cover",
-                "data": {
-                    "index": "Select covers to remove"
-                }
-            },
-            "edit_cover": {
-                "title": "Edit Cover",
-                "data": {
-                    "name": "Name",
-                    "addr": "Address",
-                    "led_addr": "LED Address",
-                    "led_number": "LED Number"
-                }
+            "reconnect_count": {
+                "name": "Reconnect count"
             }
         },
-        "error": {
-            "duplicated_addr": "The specified address is already in use",
-            "duplicated_number": "The specified number is already in use",
-            "invalid_addr": "Invalid address",
-            "discovery_failed": "Device discovery failed",
-            "invalid_csv": "Invalid CSV file format"
-        }
-    },
-    "services": {
-        "send_command": {
-            "name": "Send command",
-            "description": "Send custom command to a controller",
-            "fields": {
-                "command": {
-                    "name": "Command",
-                    "description": "Command to send to the controller. This can either be a single command or a list of commands."
-                },
-                "controller_id": {
-                    "name": "Controller ID",
-                    "description": "The controller to which to send command."
-                }
+        "binary_sensor": {
+            "connected": {
+                "name": "Connected"
             }
         }
     }
