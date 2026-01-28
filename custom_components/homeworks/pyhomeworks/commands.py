@@ -238,9 +238,7 @@ def request_grafik_eye_scene(address: str) -> str:
 # =============================================================================
 
 
-def sivoia_scene_select(
-    address: str, command: str, delay_time: float = 0.0
-) -> str:
+def sivoia_scene_select(address: str, command: str, delay_time: float = 0.0) -> str:
     """Build SVSS (Sivoia Scene Select) command.
 
     Args:

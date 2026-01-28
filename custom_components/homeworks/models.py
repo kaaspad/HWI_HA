@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
-from typing import Any
 
 
 class CCOEntityType(Enum):
@@ -58,7 +57,9 @@ class CCOAddress:
         addr_part = addr_part.strip("[]")
         parts = addr_part.split(":")
         if len(parts) != 3:
-            raise ValueError(f"CCO address must have processor:link:address: {addr_str}")
+            raise ValueError(
+                f"CCO address must have processor:link:address: {addr_str}"
+            )
 
         return cls(
             processor=int(parts[0]),

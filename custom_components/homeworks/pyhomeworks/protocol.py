@@ -32,18 +32,20 @@ _LOGGER = logging.getLogger(__name__)
 CRLF = b"\r\n"
 
 # Messages that indicate monitoring is enabled (informational, no action needed)
-IGNORED_MESSAGES = frozenset({
-    "Keypad button monitoring enabled",
-    "Keypad button monitoring disabled",
-    "GrafikEye scene monitoring enabled",
-    "GrafikEye scene monitoring disabled",
-    "Dimmer level monitoring enabled",
-    "Dimmer level monitoring disabled",
-    "Keypad led monitoring enabled",
-    "Keypad led monitoring disabled",
-    "CCO monitoring enabled",
-    "Cover monitoring enabled",
-})
+IGNORED_MESSAGES = frozenset(
+    {
+        "Keypad button monitoring enabled",
+        "Keypad button monitoring disabled",
+        "GrafikEye scene monitoring enabled",
+        "GrafikEye scene monitoring disabled",
+        "Dimmer level monitoring enabled",
+        "Dimmer level monitoring disabled",
+        "Keypad led monitoring enabled",
+        "Keypad led monitoring disabled",
+        "CCO monitoring enabled",
+        "Cover monitoring enabled",
+    }
+)
 
 
 def normalize_address(address: str) -> str:
@@ -216,9 +218,7 @@ def _make_button_parser(
 ) -> Callable[[str, list[str], datetime], ButtonEventMessage | None]:
     """Create a button event parser for a specific event type and source."""
 
-    def parser(
-        line: str, parts: list[str], ts: datetime
-    ) -> ButtonEventMessage | None:
+    def parser(line: str, parts: list[str], ts: datetime) -> ButtonEventMessage | None:
         if len(parts) < 3:
             return None
 
@@ -240,9 +240,7 @@ def _make_button_parser(
     return parser
 
 
-def _parse_kes(
-    line: str, parts: list[str], ts: datetime
-) -> KeypadEnableMessage | None:
+def _parse_kes(line: str, parts: list[str], ts: datetime) -> KeypadEnableMessage | None:
     """Parse KES (Keypad Enable State) message.
 
     Format: KES, [pp:ll:aa], <enabled|disabled>
@@ -285,9 +283,7 @@ def _parse_gss(
     )
 
 
-def _parse_svs(
-    line: str, parts: list[str], ts: datetime
-) -> SivoiaSceneMessage | None:
+def _parse_svs(line: str, parts: list[str], ts: datetime) -> SivoiaSceneMessage | None:
     """Parse SVS (Sivoia Scene) message.
 
     Format: SVS, [pp:ll:aa], <command>, <status>
@@ -313,9 +309,7 @@ def _parse_svs(
 # =============================================================================
 
 # Map command prefixes to parser functions
-_PARSERS: dict[
-    str, Callable[[str, list[str], datetime], AnyMessage | None]
-] = {
+_PARSERS: dict[str, Callable[[str, list[str], datetime], AnyMessage | None]] = {
     # Keypad LED state
     "KLS": _parse_kls,
     # Dimmer level

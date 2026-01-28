@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any, Callable
 
 from pyhomeworks import (
@@ -236,9 +235,7 @@ class HomeworksClient:
     def _handle_keypad_enable_message(self, msg: KeypadEnableMessage) -> None:
         """Handle keypad enable/disable message."""
         if self._message_callback:
-            self._message_callback(
-                HW_KEYPAD_ENABLE_CHANGED, [msg.address, msg.enabled]
-            )
+            self._message_callback(HW_KEYPAD_ENABLE_CHANGED, [msg.address, msg.enabled])
 
     def _handle_grafik_eye_message(self, msg: GrafikEyeSceneMessage) -> None:
         """Handle GRAFIK Eye scene message."""
@@ -269,9 +266,7 @@ class HomeworksClient:
     ) -> bool:
         """Fade a dimmer to a level."""
         async with self._command_lock:
-            result = await self._client.fade_dim(
-                address, level, fade_time, delay_time
-            )
+            result = await self._client.fade_dim(address, level, fade_time, delay_time)
             await asyncio.sleep(self._config.command_delay)
             return result
 
@@ -304,9 +299,7 @@ class HomeworksClient:
             await asyncio.sleep(self._config.command_delay)
             return result
 
-    async def cco_pulse(
-        self, address: str, relay: int, pulse_time: float
-    ) -> bool:
+    async def cco_pulse(self, address: str, relay: int, pulse_time: float) -> bool:
         """Pulse a CCO relay."""
         async with self._command_lock:
             result = await self._client.cco_pulse(address, relay, pulse_time)
@@ -327,9 +320,7 @@ class HomeworksClient:
             await asyncio.sleep(self._config.command_delay)
             return result
 
-    async def set_led(
-        self, address: str, led_number: int, state: int
-    ) -> bool:
+    async def set_led(self, address: str, led_number: int, state: int) -> bool:
         """Set a single LED state."""
         async with self._command_lock:
             result = await self._client.set_led(address, led_number, state)
