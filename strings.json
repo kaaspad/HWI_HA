@@ -1,0 +1,137 @@
+{
+    "config": {
+        "step": {
+            "init": {
+                "title": "Lutron Homeworks Options",
+                "menu_options": {
+                    "import_csv": "Import from CSV",
+                    "add_keypad": "Add Keypad",
+                    "select_edit_keypad": "Edit Keypad",
+                    "remove_keypad": "Remove Keypad",
+                    "add_light": "Add Light",
+                    "select_edit_light": "Edit Light",
+                    "remove_light": "Remove Light",
+                    "add_cco": "Add CCO",
+                    "remove_cco": "Remove CCO",
+                    "select_edit_cco": "Edit CCO",
+                    "add_cover": "Add Cover",
+                    "remove_cover": "Remove Cover",
+                    "select_edit_cover": "Edit Cover"
+                }
+            },
+            "import_csv": {
+                "title": "Import Devices from CSV",
+                "data": {
+                    "csv_file": "CSV Content"
+                }
+            },
+            "confirm_import": {
+                "title": "Confirm Device Import",
+                "data": {
+                    "devices": "Select devices to import"
+                }
+            },
+            "add_keypad": {
+                "title": "Add Keypad",
+                "data": {
+                    "name": "Name",
+                    "addr": "Address"
+                }
+            },
+            "edit_keypad": {
+                "title": "Edit Keypad",
+                "menu_options": {
+                    "add_button": "Add Button",
+                    "select_edit_button": "Edit Button",
+                    "remove_button": "Remove Button"
+                }
+            },
+            "add_button": {
+                "title": "Add Button",
+                "data": {
+                    "name": "Name",
+                    "number": "Button Number",
+                    "led": "LED Feedback",
+                    "release_delay": "Release Delay"
+                }
+            },
+            "edit_button": {
+                "title": "Edit Button",
+                "data": {
+                    "led": "LED Feedback",
+                    "release_delay": "Release Delay"
+                }
+            },
+            "remove_button": {
+                "title": "Remove Button",
+                "data": {
+                    "index": "Select buttons to remove"
+                }
+            },
+            "remove_keypad": {
+                "title": "Remove Keypad",
+                "data": {
+                    "index": "Select keypads to remove"
+                }
+            },
+            "add_light": {
+                "title": "Add Light",
+                "data": {
+                    "name": "Name",
+                    "addr": "Address",
+                    "rate": "Fade Rate"
+                }
+            },
+            "edit_light": {
+                "title": "Edit Light",
+                "data": {
+                    "rate": "Fade Rate"
+                }
+            },
+            "remove_light": {
+                "title": "Remove Light",
+                "data": {
+                    "index": "Select lights to remove"
+                }
+            },
+            "add_cco": {
+                "title": "Add CCO",
+                "data": {
+                    "name": "Name",
+                    "addr": "Address",
+                    "relay_number": "Relay Number"
+                }
+            },
+            "remove_cco": {
+                "title": "Remove CCO",
+                "data": {
+                    "index": "Select CCOs to remove"
+                }
+            },
+            "add_cover": {
+                "title": "Add Cover",
+                "data": {
+                    "name": "Name",
+                    "addr": "Address",
+                    "led_addr": "LED Address",
+                    "led_number": "LED Number"
+                }
+            },
+            "remove_cover": {
+                "title": "Remove Cover",
+                "data": {
+                    "index": "Select covers to remove"
+                }
+            },
+            "edit_cover": {
+                "title": "Edit Cover",
+                "data": {
+                    "name": "Name",
+                    "addr": "Address",
+                    "led_addr": "LED Address",
+                    "led_number": "LED Number"
+                }
+            }
+        }
+    }
+} 
