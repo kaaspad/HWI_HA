@@ -1,0 +1,192 @@
+"""Support for Lutron Homeworks CCO relays as climate devices (on/off only)."""
+
+from __future__ import annotations
+
+import logging
+
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityFeature,
+    HVACMode,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_NAME, UnitOfTemperature
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from . import HomeworksData
+from .const import (
+    CONF_ADDR,
+    CONF_CCO_DEVICES,
+    CONF_CONTROLLER_ID,
+    CONF_ENTITY_TYPE,
+    CONF_INVERTED,
+    CONF_RELAY_NUMBER,
+    CCO_TYPE_CLIMATE,
+    DOMAIN,
+)
+from .coordinator import HomeworksCoordinator
+from .models import CCOAddress, CCODevice, CCOEntityType
+
+_LOGGER = logging.getLogger(__name__)
+
+DEFAULT_CLIMATE_NAME = "Homeworks Climate"
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Set up Homeworks CCO relays as climate devices."""
+    data: HomeworksData = hass.data[DOMAIN][entry.entry_id]
+    coordinator = data.coordinator
+    controller_id = entry.options[CONF_CONTROLLER_ID]
+    entities: list[HomeworksCCOClimate] = []
+
+    # CCO devices with type=climate
+    for device_config in entry.options.get(CONF_CCO_DEVICES, []):
+        if device_config.get(CONF_ENTITY_TYPE) != CCO_TYPE_CLIMATE:
+            continue
+
+        try:
+            addr_str = device_config[CONF_ADDR]
+            button = device_config.get(CONF_RELAY_NUMBER, 1)
+
+            # Handle address with or without button
+            if "," not in addr_str:
+                full_addr = f"{addr_str},{button}"
+            else:
+                full_addr = addr_str
+
+            address = CCOAddress.from_string(full_addr)
+
+            device = CCODevice(
+                address=address,
+                name=device_config.get(CONF_NAME, DEFAULT_CLIMATE_NAME),
+                entity_type=CCOEntityType.CLIMATE,
+                inverted=device_config.get(CONF_INVERTED, False),
+            )
+
+            entity = HomeworksCCOClimate(
+                coordinator=coordinator,
+                controller_id=controller_id,
+                device=device,
+            )
+            entities.append(entity)
+
+        except Exception as err:
+            _LOGGER.error("Failed to create climate for %s: %s", device_config, err)
+
+    if entities:
+        _LOGGER.debug("Adding %d CCO climate entities", len(entities))
+        async_add_entities(entities)
+    else:
+        _LOGGER.debug("No CCO climate devices to add")
+
+
+class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity):
+    """Homeworks CCO Relay Climate.
+
+    This is an on/off only climate device (no temperature control).
+    State is derived from the central KLS state engine in the coordinator.
+    """
+
+    _attr_has_entity_name = True
+    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
+    _attr_supported_features = ClimateEntityFeature(0)  # No features, just on/off
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _enable_turn_on_off_backwards_compat = False
+
+    def __init__(
+        self,
+        coordinator: HomeworksCoordinator,
+        controller_id: str,
+        device: CCODevice,
+    ) -> None:
+        """Initialize the CCO climate."""
+        super().__init__(coordinator)
+        self._device = device
+        self._controller_id = controller_id
+
+        # Set up entity attributes
+        self._attr_unique_id = f"homeworks.{controller_id}.climate.{device.unique_id}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{controller_id}.climate.{device.address}")},
+            name=device.name,
+            manufacturer="Lutron",
+            model="HomeWorks CCO Climate",
+        )
+        self._attr_extra_state_attributes = {
+            "homeworks_address": str(device.address),
+            "button": device.address.button,
+            "inverted": device.inverted,
+        }
+
+    @property
+    def name(self) -> str | None:
+        """Return the name of the climate device."""
+        return self._device.name or None
+
+    @property
+    def hvac_mode(self) -> HVACMode:
+        """Return current HVAC mode (heat when on, off when off)."""
+        is_on = self.coordinator.get_cco_state(self._device.address)
+        return HVACMode.HEAT if is_on else HVACMode.OFF
+
+    @property
+    def current_temperature(self) -> float | None:
+        """Return None as this is an on/off only device with no temperature sensor."""
+        return None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        """Set HVAC mode (heat = on, off = off)."""
+        if hvac_mode == HVACMode.HEAT:
+            await self._async_turn_on()
+        else:
+            await self._async_turn_off()
+
+    async def _async_turn_on(self) -> None:
+        """Turn on the climate device (close the CCO relay)."""
+        _LOGGER.debug("Turning on CCO climate: %s", self._device.address)
+
+        if self._device.inverted:
+            await self.coordinator.async_cco_open(self._device.address)
+        else:
+            await self.coordinator.async_cco_close(self._device.address)
+
+        # Request immediate state update
+        await self.coordinator.async_request_keypad_led_states(
+            self._device.address.to_kls_address()
+        )
+
+    async def _async_turn_off(self) -> None:
+        """Turn off the climate device (open the CCO relay)."""
+        _LOGGER.debug("Turning off CCO climate: %s", self._device.address)
+
+        if self._device.inverted:
+            await self.coordinator.async_cco_close(self._device.address)
+        else:
+            await self.coordinator.async_cco_open(self._device.address)
+
+        # Request immediate state update
+        await self.coordinator.async_request_keypad_led_states(
+            self._device.address.to_kls_address()
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Register for coordinator updates when added to hass."""
+        await super().async_added_to_hass()
+
+        # Ensure the CCO device is registered with the coordinator
+        self.coordinator.register_cco_device(self._device)
+
+        # Request initial state
+        await self.coordinator.async_request_keypad_led_states(
+            self._device.address.to_kls_address()
+        )

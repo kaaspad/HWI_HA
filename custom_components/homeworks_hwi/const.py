@@ -63,6 +63,7 @@ CCO_TYPE_SWITCH: Final = "switch"
 CCO_TYPE_LIGHT: Final = "light"
 CCO_TYPE_COVER: Final = "cover"
 CCO_TYPE_LOCK: Final = "lock"
+CCO_TYPE_CLIMATE: Final = "climate"
 
 # Event names
 EVENT_BUTTON_PRESS: Final = "homeworks_button_press"

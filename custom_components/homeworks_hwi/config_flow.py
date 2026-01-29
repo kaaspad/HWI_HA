@@ -64,6 +64,7 @@ from .const import (
     CONF_RATE,
     CONF_RELAY_NUMBER,
     CONF_RELEASE_DELAY,
+    CCO_TYPE_CLIMATE,
     CCO_TYPE_COVER,
     CCO_TYPE_LIGHT,
     CCO_TYPE_LOCK,
@@ -87,6 +88,7 @@ CCO_ENTITY_TYPES = [
     selector.SelectOptionDict(value=CCO_TYPE_LIGHT, label="light"),
     selector.SelectOptionDict(value=CCO_TYPE_COVER, label="cover"),
     selector.SelectOptionDict(value=CCO_TYPE_LOCK, label="lock"),
+    selector.SelectOptionDict(value=CCO_TYPE_CLIMATE, label="climate"),
 ]
 
 
@@ -623,6 +625,7 @@ class DeviceImport(NamedTuple):
     address: str
     button: int | None
     name: str
+    entity_type: str | None = None  # For CCO: switch/light/cover/lock/climate
 
 
 async def async_parse_csv(
@@ -637,15 +640,23 @@ async def async_parse_csv(
     try:
         for row in reader:
             device_type = row.get("device_type", "").strip().upper()
+            # Get optional entity type for CCO devices (switch/light/cover/lock/climate)
+            cco_type = row.get("type", "").strip().lower() or None
 
             if device_type in ("CCO", "SWITCH"):
                 button = int(row.get("relay", row.get("button", 1)))
+                # Map type column to entity type, default to switch
+                entity_type = cco_type if cco_type in (
+                    CCO_TYPE_SWITCH, CCO_TYPE_LIGHT, CCO_TYPE_COVER,
+                    CCO_TYPE_LOCK, CCO_TYPE_CLIMATE
+                ) else CCO_TYPE_SWITCH
                 devices.append(
                     DeviceImport(
                         "CCO",
                         normalize_address(row["address"].strip()),
                         button,
                         row.get("name", "").strip(),
+                        entity_type,
                     )
                 )
             elif device_type in ("LIGHT", "DIMMER"):
@@ -655,26 +666,40 @@ async def async_parse_csv(
                         normalize_address(row["address"].strip()),
                         None,
                         row.get("name", "").strip(),
+                        None,
                     )
                 )
             elif device_type == "COVER":
                 button = int(row.get("relay", row.get("button", 1)))
                 devices.append(
                     DeviceImport(
-                        "COVER",
+                        "CCO",
                         normalize_address(row["address"].strip()),
                         button,
                         row.get("name", "").strip(),
+                        CCO_TYPE_COVER,
                     )
                 )
             elif device_type == "LOCK":
                 button = int(row.get("relay", row.get("button", 1)))
                 devices.append(
                     DeviceImport(
-                        "LOCK",
+                        "CCO",
                         normalize_address(row["address"].strip()),
                         button,
                         row.get("name", "").strip(),
+                        CCO_TYPE_LOCK,
+                    )
+                )
+            elif device_type == "CLIMATE":
+                button = int(row.get("relay", row.get("button", 1)))
+                devices.append(
+                    DeviceImport(
+                        "CCO",
+                        normalize_address(row["address"].strip()),
+                        button,
+                        row.get("name", "").strip(),
+                        CCO_TYPE_CLIMATE,
                     )
                 )
     except Exception as err:
@@ -696,8 +721,9 @@ async def get_confirm_import_schema(handler: SchemaCommonFlowHandler) -> vol.Sch
         if dev.device_type == "DIMMER":
             selections[str(idx)] = f"Dimmer: {dev.name} ({dev.address})"
         else:
+            entity_type = dev.entity_type or "switch"
             selections[str(idx)] = (
-                f"{dev.device_type}: {dev.name} ({dev.address}:{dev.button})"
+                f"CCO ({entity_type}): {dev.name} ({dev.address}:{dev.button})"
             )
 
     return vol.Schema(
@@ -728,12 +754,8 @@ async def validate_confirm_import(
                 }
             )
         else:
-            entity_type_map = {
-                "CCO": CCO_TYPE_SWITCH,
-                "COVER": CCO_TYPE_COVER,
-                "LOCK": CCO_TYPE_LOCK,
-            }
-            entity_type = entity_type_map.get(device.device_type, CCO_TYPE_SWITCH)
+            # Use entity_type from CSV if provided, otherwise default to switch
+            entity_type = device.entity_type or CCO_TYPE_SWITCH
             items = handler.options.setdefault(CONF_CCO_DEVICES, [])
             items.append(
                 {
