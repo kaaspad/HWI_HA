@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 
 
@@ -275,12 +275,12 @@ class ControllerHealth:
 
     def record_message(self) -> None:
         """Record that a message was received."""
-        self.last_message_time = datetime.now()
+        self.last_message_time = datetime.now(timezone.utc)
 
     def record_kls(self) -> None:
         """Record that a KLS message was received."""
-        self.last_kls_time = datetime.now()
-        self.last_message_time = datetime.now()
+        self.last_kls_time = datetime.now(timezone.utc)
+        self.last_message_time = datetime.now(timezone.utc)
 
     def record_reconnect(self) -> None:
         """Record a reconnection event."""
