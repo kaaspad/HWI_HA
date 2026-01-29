@@ -825,6 +825,12 @@ async def validate_confirm_import(
                 continue
             # Use entity_type from CSV if provided, otherwise default to switch
             entity_type = device.entity_type or CCO_TYPE_SWITCH
+            _LOGGER.debug(
+                "Importing CCO device %s with entity_type=%s (from CSV: %s)",
+                device.name,
+                entity_type,
+                device.entity_type,
+            )
             items = handler.options.setdefault(CONF_CCO_DEVICES, [])
             cco_config = {
                 CONF_ADDR: device.address,

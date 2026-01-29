@@ -44,7 +44,14 @@ async def async_setup_entry(
 
     # New-style CCO devices with type=switch
     for device_config in entry.options.get(CONF_CCO_DEVICES, []):
-        if device_config.get(CONF_ENTITY_TYPE, CCO_TYPE_SWITCH) != CCO_TYPE_SWITCH:
+        entity_type = device_config.get(CONF_ENTITY_TYPE, CCO_TYPE_SWITCH)
+        _LOGGER.debug(
+            "Switch platform checking device %s: entity_type=%s",
+            device_config.get(CONF_NAME, "unknown"),
+            entity_type,
+        )
+        if entity_type != CCO_TYPE_SWITCH:
+            _LOGGER.debug("Skipping - not a switch (type=%s)", entity_type)
             continue
 
         try:
