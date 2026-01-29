@@ -108,12 +108,7 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
         # Set up entity attributes - store name for entity_id generation
         self._entity_name = device.name
         self._attr_unique_id = f"homeworks.{controller_id}.fan.{device.unique_id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.fan.{device.address}")},
-            name=device.name,
-            manufacturer="Lutron",
-            model="HomeWorks CCO Fan",
-        )
+        # Temporarily removed device_info to debug entity_id doubling
         self._attr_extra_state_attributes = {
             "homeworks_address": str(device.address),
             "button": device.address.button,
@@ -123,11 +118,6 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
     @property
     def name(self) -> str:
         """Return the name of the entity."""
-        return self._entity_name
-
-    @property
-    def suggested_object_id(self) -> str:
-        """Return the suggested object ID for entity_id generation."""
         return self._entity_name
 
     @property
