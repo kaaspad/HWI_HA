@@ -18,6 +18,7 @@ from .client import (
     HW_BUTTON_HOLD,
     HW_BUTTON_PRESSED,
     HW_BUTTON_RELEASED,
+    HW_CCI_CHANGED,
     HW_CONNECTION_LOST,
     HW_CONNECTION_RESTORED,
     HW_KEYPAD_LED_CHANGED,
@@ -84,6 +85,12 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Keypad LED state cache: address -> list[int]
         self._keypad_led_states: dict[str, list[int]] = {}
 
+        # CCI state cache: (processor, link, address, input) -> bool
+        self._cci_states: dict[tuple[int, int, int, int], bool] = {}
+
+        # CCI devices registry: unique_key -> CCIDevice
+        self._cci_devices: dict[tuple[int, int, int, int], Any] = {}
+
         # Addresses that need KLS polling
         self._kls_poll_addresses: set[str] = set()
 
@@ -92,6 +99,9 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Event callbacks
         self._button_callbacks: dict[str, list[callable[[str, int, str], None]]] = {}
+
+        # CCI state change callbacks
+        self._cci_callbacks: dict[tuple[int, int, int, int], list[callable[[bool], None]]] = {}
 
     @property
     def controller_id(self) -> str:
@@ -165,6 +175,65 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Get LED states for a keypad."""
         normalized = normalize_address(address)
         return self._keypad_led_states.get(normalized, [0] * 24)
+
+    def register_cci_device(
+        self,
+        address: str,
+        input_number: int,
+        device: Any,
+    ) -> None:
+        """Register a CCI device for state tracking."""
+        normalized = normalize_address(address)
+        parts = normalized.strip("[]").split(":")
+        key = (int(parts[0]), int(parts[1]), int(parts[2]), input_number)
+        self._cci_devices[key] = device
+        self._cci_states[key] = False  # Default to off/open
+
+        _LOGGER.debug(
+            "Registered CCI device: %s input %d",
+            normalized,
+            input_number,
+        )
+
+    def unregister_cci_device(self, address: str, input_number: int) -> None:
+        """Unregister a CCI device."""
+        normalized = normalize_address(address)
+        parts = normalized.strip("[]").split(":")
+        key = (int(parts[0]), int(parts[1]), int(parts[2]), input_number)
+        self._cci_devices.pop(key, None)
+        self._cci_states.pop(key, None)
+
+    def get_cci_state(self, address: str, input_number: int) -> bool:
+        """Get the current state of a CCI input."""
+        normalized = normalize_address(address)
+        parts = normalized.strip("[]").split(":")
+        key = (int(parts[0]), int(parts[1]), int(parts[2]), input_number)
+        return self._cci_states.get(key, False)
+
+    def register_cci_callback(
+        self,
+        address: str,
+        input_number: int,
+        callback: callable[[bool], None],
+    ) -> callable[[], None]:
+        """Register a callback for CCI state changes.
+
+        Returns a function to unregister the callback.
+        """
+        normalized = normalize_address(address)
+        parts = normalized.strip("[]").split(":")
+        key = (int(parts[0]), int(parts[1]), int(parts[2]), input_number)
+
+        if key not in self._cci_callbacks:
+            self._cci_callbacks[key] = []
+        self._cci_callbacks[key].append(callback)
+
+        def unregister():
+            self._cci_callbacks[key].remove(callback)
+            if not self._cci_callbacks[key]:
+                del self._cci_callbacks[key]
+
+        return unregister
 
     def register_button_callback(
         self,
@@ -277,6 +346,8 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._dispatch_button_event(values[0], values[1], "hold")
         elif msg_type == HW_BUTTON_DOUBLE_TAP:
             self._dispatch_button_event(values[0], values[1], "double_tap")
+        elif msg_type == HW_CCI_CHANGED:
+            self._handle_cci_update(values[0], values[1], values[2])
         elif msg_type == HW_CONNECTION_LOST:
             _LOGGER.warning("Controller connection lost")
         elif msg_type == HW_CONNECTION_RESTORED:
@@ -390,6 +461,55 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 cb(normalized, button, event_type)
             except Exception as err:
                 _LOGGER.error("Button callback error: %s", err)
+
+    def _handle_cci_update(
+        self, address: str, input_number: int, state: bool
+    ) -> None:
+        """Handle a CCI (Contact Closure Input) state change."""
+        normalized = normalize_address(address)
+
+        # Parse the address to get processor/link/address
+        try:
+            parts = normalized.strip("[]").split(":")
+            processor = int(parts[0])
+            link = int(parts[1])
+            addr = int(parts[2])
+        except (ValueError, IndexError):
+            _LOGGER.warning("Failed to parse CCI address: %s", normalized)
+            return
+
+        key = (processor, link, addr, input_number)
+        old_state = self._cci_states.get(key)
+
+        _LOGGER.debug(
+            "CCI %s input %d: %s -> %s",
+            normalized,
+            input_number,
+            "CLOSED" if old_state else "OPEN",
+            "CLOSED" if state else "OPEN",
+        )
+
+        if old_state != state:
+            self._cci_states[key] = state
+
+            # Notify registered callbacks
+            callbacks = self._cci_callbacks.get(key, [])
+            for cb in callbacks:
+                try:
+                    cb(state)
+                except Exception as err:
+                    _LOGGER.error("CCI callback error: %s", err)
+
+            # Notify coordinator listeners
+            self.async_set_updated_data(
+                {
+                    "cco_states": dict(self._cco_states),
+                    "cci_states": dict(self._cci_states),
+                    "dimmer_states": dict(self._dimmer_states),
+                    "connected": self.connected,
+                    "last_update": datetime.now().isoformat(),
+                }
+            )
 
     # === Command Methods (proxies to client) ===
 

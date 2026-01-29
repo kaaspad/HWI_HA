@@ -1,10 +1,18 @@
-"""Support for Lutron Homeworks binary sensors (keypad LED indicators)."""
+"""Support for Lutron Homeworks binary sensors.
+
+This module provides:
+- Keypad LED binary sensors (existing)
+- CCI (Contact Closure Input) binary sensors (new)
+"""
 
 from __future__ import annotations
 
 import logging
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
@@ -16,16 +24,40 @@ from . import HomeworksData
 from .const import (
     CONF_ADDR,
     CONF_BUTTONS,
+    CONF_CCI_DEVICES,
     CONF_CONTROLLER_ID,
+    CONF_DEVICE_CLASS,
+    CONF_INPUT_NUMBER,
     CONF_KEYPADS,
     CONF_LED,
     CONF_NUMBER,
+    DEFAULT_CCI_NAME,
     DOMAIN,
 )
 from .coordinator import HomeworksCoordinator
 from .models import normalize_address
 
 _LOGGER = logging.getLogger(__name__)
+
+# Map string device classes to HA device classes for CCI
+DEVICE_CLASS_MAP = {
+    "door": BinarySensorDeviceClass.DOOR,
+    "window": BinarySensorDeviceClass.WINDOW,
+    "garage_door": BinarySensorDeviceClass.GARAGE_DOOR,
+    "opening": BinarySensorDeviceClass.OPENING,
+    "lock": BinarySensorDeviceClass.LOCK,
+    "motion": BinarySensorDeviceClass.MOTION,
+    "occupancy": BinarySensorDeviceClass.OCCUPANCY,
+    "presence": BinarySensorDeviceClass.PRESENCE,
+    "safety": BinarySensorDeviceClass.SAFETY,
+    "plug": BinarySensorDeviceClass.PLUG,
+    "power": BinarySensorDeviceClass.POWER,
+    "running": BinarySensorDeviceClass.RUNNING,
+    "problem": BinarySensorDeviceClass.PROBLEM,
+    "connectivity": BinarySensorDeviceClass.CONNECTIVITY,
+    None: None,
+    "": None,
+}
 
 
 async def async_setup_entry(
@@ -35,8 +67,9 @@ async def async_setup_entry(
     data: HomeworksData = hass.data[DOMAIN][entry.entry_id]
     coordinator = data.coordinator
     controller_id = entry.options[CONF_CONTROLLER_ID]
-    entities: list[HomeworksBinarySensor] = []
+    entities: list[BinarySensorEntity] = []
 
+    # Keypad LED binary sensors
     for keypad in entry.options.get(CONF_KEYPADS, []):
         keypad_addr = normalize_address(keypad[CONF_ADDR])
         keypad_name = keypad.get(CONF_NAME, "Keypad")
@@ -48,7 +81,7 @@ async def async_setup_entry(
             if not button.get(CONF_LED, False):
                 continue
 
-            entity = HomeworksBinarySensor(
+            entity = HomeworksLEDBinarySensor(
                 coordinator=coordinator,
                 controller_id=controller_id,
                 keypad_addr=keypad_addr,
@@ -58,12 +91,43 @@ async def async_setup_entry(
             )
             entities.append(entity)
 
+    # CCI (Contact Closure Input) binary sensors
+    _LOGGER.debug(
+        "Binary sensor platform checking %d CCI devices",
+        len(entry.options.get(CONF_CCI_DEVICES, [])),
+    )
+
+    for device_config in entry.options.get(CONF_CCI_DEVICES, []):
+        try:
+            addr_str = device_config[CONF_ADDR]
+            input_number = device_config.get(CONF_INPUT_NUMBER, 1)
+            name = device_config.get(CONF_NAME, DEFAULT_CCI_NAME)
+            device_class_str = device_config.get(CONF_DEVICE_CLASS, None)
+
+            # Map string device class to HA device class
+            device_class = DEVICE_CLASS_MAP.get(device_class_str)
+
+            entity = HomeworksCCIBinarySensor(
+                coordinator=coordinator,
+                controller_id=controller_id,
+                address=addr_str,
+                input_number=input_number,
+                name=name,
+                device_class=device_class,
+            )
+            entities.append(entity)
+
+        except Exception as err:
+            _LOGGER.error("Failed to create CCI binary sensor for %s: %s", device_config, err)
+
     if entities:
         _LOGGER.debug("Adding %d binary sensor entities", len(entities))
         async_add_entities(entities)
+    else:
+        _LOGGER.debug("No binary sensors to add")
 
 
-class HomeworksBinarySensor(
+class HomeworksLEDBinarySensor(
     CoordinatorEntity[HomeworksCoordinator], BinarySensorEntity
 ):
     """Homeworks Binary Sensor for keypad LED state."""
@@ -126,3 +190,98 @@ class HomeworksBinarySensor(
 
         # Request initial state
         await self.coordinator.async_request_keypad_led_states(self._keypad_addr)
+
+
+class HomeworksCCIBinarySensor(
+    CoordinatorEntity[HomeworksCoordinator], BinarySensorEntity
+):
+    """Homeworks CCI Binary Sensor.
+
+    Represents a physical input (key switch, contact closure) that reports
+    its state when changed. Used to trigger Home Assistant automations.
+    """
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: HomeworksCoordinator,
+        controller_id: str,
+        address: str,
+        input_number: int,
+        name: str,
+        device_class: BinarySensorDeviceClass | None,
+    ) -> None:
+        """Initialize the CCI binary sensor."""
+        super().__init__(coordinator)
+        self._address = normalize_address(address)
+        self._input_number = input_number
+        self._controller_id = controller_id
+        self._name = name
+        self._unregister_callback: callable[[], None] | None = None
+
+        # Set up entity attributes
+        addr_clean = self._address.replace(":", "_").strip("[]")
+        self._attr_unique_id = f"homeworks.{controller_id}.cci.{addr_clean}_{input_number}"
+        self._attr_device_class = device_class
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{controller_id}.cci.{self._address}_{input_number}")},
+            name=name,
+            manufacturer="Lutron",
+            model="HomeWorks CCI Input",
+        )
+        self._attr_extra_state_attributes = {
+            "homeworks_address": self._address,
+            "input_number": input_number,
+        }
+
+    @property
+    def name(self) -> str | None:
+        """Return the name of the binary sensor."""
+        return self._name or None
+
+    @property
+    def is_on(self) -> bool:
+        """Return True if the input is closed/on."""
+        return self.coordinator.get_cci_state(self._address, self._input_number)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+    @callback
+    def _handle_cci_state_change(self, state: bool) -> None:
+        """Handle direct CCI state change callback."""
+        self.async_write_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        """Register for coordinator updates when added to hass."""
+        await super().async_added_to_hass()
+
+        # Register the CCI device with the coordinator
+        self.coordinator.register_cci_device(
+            self._address,
+            self._input_number,
+            self,
+        )
+
+        # Register for direct state change callbacks
+        self._unregister_callback = self.coordinator.register_cci_callback(
+            self._address,
+            self._input_number,
+            self._handle_cci_state_change,
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Unregister when removed from hass."""
+        await super().async_will_remove_from_hass()
+
+        if self._unregister_callback:
+            self._unregister_callback()
+
+        self.coordinator.unregister_cci_device(self._address, self._input_number)
+
+
+# Keep old class name for backwards compatibility
+HomeworksBinarySensor = HomeworksLEDBinarySensor

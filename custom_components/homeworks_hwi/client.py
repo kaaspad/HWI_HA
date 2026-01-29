@@ -21,6 +21,7 @@ from .hwi_protocol import (
     KeypadEnableMessage,
     GrafikEyeSceneMessage,
     SivoiaSceneMessage,
+    CCIMessage,
     AnyMessage,
     normalize_address,
 )
@@ -39,6 +40,7 @@ HW_LIGHT_CHANGED = "light_changed"
 HW_KEYPAD_ENABLE_CHANGED = "keypad_enable_changed"
 HW_GRAFIK_EYE_SCENE_CHANGED = "grafik_eye_scene_changed"
 HW_SIVOIA_SCENE_CHANGED = "sivoia_scene_changed"
+HW_CCI_CHANGED = "cci_changed"
 HW_LOGIN_INCORRECT = "login_incorrect"
 HW_CONNECTION_LOST = "connection_lost"
 HW_CONNECTION_RESTORED = "connection_restored"
@@ -190,6 +192,8 @@ class HomeworksClient:
             self._handle_grafik_eye_message(msg)
         elif isinstance(msg, SivoiaSceneMessage):
             self._handle_sivoia_message(msg)
+        elif isinstance(msg, CCIMessage):
+            self._handle_cci_message(msg)
 
     def _handle_kls_message(self, msg: KLSMessage) -> None:
         """Handle KLS (Keypad LED State) message."""
@@ -249,6 +253,19 @@ class HomeworksClient:
         if self._message_callback:
             self._message_callback(
                 HW_SIVOIA_SCENE_CHANGED, [msg.address, msg.command, msg.status]
+            )
+
+    def _handle_cci_message(self, msg: CCIMessage) -> None:
+        """Handle CCI (Contact Closure Input) message."""
+        _LOGGER.debug(
+            "CCI update for %s input %d: %s",
+            msg.address,
+            msg.input_number,
+            "CLOSED" if msg.state else "OPEN",
+        )
+        if self._message_callback:
+            self._message_callback(
+                HW_CCI_CHANGED, [msg.address, msg.input_number, msg.state]
             )
 
     # === Command Methods ===
