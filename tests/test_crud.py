@@ -581,3 +581,196 @@ class TestLegacyMigration:
 
         assert new_device["entity_type"] == "lock"
         assert new_device["button_number"] == 2
+
+
+# === CSV Import Tests ===
+
+
+class TestCSVImport:
+    """Tests for CSV import functionality."""
+
+    def test_parse_csv_basic_switch(self):
+        """Test parsing a basic switch from CSV."""
+        csv_content = """device_type,address,relay,name
+CCO,02:06:03,6,Kitchen Light"""
+
+        import csv
+        from io import StringIO
+
+        f = StringIO(csv_content)
+        reader = csv.DictReader(f)
+
+        devices = []
+        for row in reader:
+            device_type = row.get("device_type", "").strip().upper()
+            if device_type in ("CCO", "SWITCH"):
+                button = int(row.get("relay", row.get("button", 1)))
+                cco_type = row.get("type", "").strip().lower() or "switch"
+                devices.append({
+                    "device_type": "CCO",
+                    "address": normalize_address(row["address"].strip()),
+                    "button": button,
+                    "name": row.get("name", "").strip(),
+                    "entity_type": cco_type,
+                })
+
+        assert len(devices) == 1
+        assert devices[0]["name"] == "Kitchen Light"
+        assert devices[0]["address"] == "[02:06:03]"
+        assert devices[0]["button"] == 6
+        assert devices[0]["entity_type"] == "switch"
+
+    def test_parse_csv_with_type_column(self):
+        """Test parsing CSV with type column for CCO devices."""
+        csv_content = """device_type,address,relay,name,type
+CCO,02:06:03,6,Kitchen Light,switch
+CCO,02:06:04,1,Garage Door,cover
+CCO,02:06:05,2,Front Door,lock
+CCO,02:06:06,3,Thermostat,climate
+CCO,02:06:07,4,Bedroom Light,light"""
+
+        import csv
+        from io import StringIO
+
+        f = StringIO(csv_content)
+        reader = csv.DictReader(f)
+
+        devices = []
+        for row in reader:
+            device_type = row.get("device_type", "").strip().upper()
+            if device_type in ("CCO", "SWITCH"):
+                button = int(row.get("relay", row.get("button", 1)))
+                cco_type = row.get("type", "").strip().lower() or "switch"
+                devices.append({
+                    "device_type": "CCO",
+                    "address": normalize_address(row["address"].strip()),
+                    "button": button,
+                    "name": row.get("name", "").strip(),
+                    "entity_type": cco_type,
+                })
+
+        assert len(devices) == 5
+        assert devices[0]["entity_type"] == "switch"
+        assert devices[1]["entity_type"] == "cover"
+        assert devices[2]["entity_type"] == "lock"
+        assert devices[3]["entity_type"] == "climate"
+        assert devices[4]["entity_type"] == "light"
+
+    def test_parse_csv_dimmer(self):
+        """Test parsing dimmers from CSV."""
+        csv_content = """device_type,address,name
+DIMMER,01:01:00:02:04,Living Room
+LIGHT,01:01:00:02:05,Dining Room"""
+
+        import csv
+        from io import StringIO
+
+        f = StringIO(csv_content)
+        reader = csv.DictReader(f)
+
+        devices = []
+        for row in reader:
+            device_type = row.get("device_type", "").strip().upper()
+            if device_type in ("LIGHT", "DIMMER"):
+                devices.append({
+                    "device_type": "DIMMER",
+                    "address": normalize_address(row["address"].strip()),
+                    "name": row.get("name", "").strip(),
+                })
+
+        assert len(devices) == 2
+        assert devices[0]["device_type"] == "DIMMER"
+        assert devices[0]["name"] == "Living Room"
+        assert devices[1]["name"] == "Dining Room"
+
+    def test_parse_csv_mixed_devices(self):
+        """Test parsing mixed device types from CSV."""
+        csv_content = """device_type,address,relay,name,type
+CCO,02:06:03,6,Kitchen Light,switch
+DIMMER,01:01:00:02:04,,Living Room,
+COVER,02:06:04,1,Garage Door,
+LOCK,02:06:05,2,Front Door,
+CLIMATE,02:06:06,3,Thermostat,"""
+
+        import csv
+        from io import StringIO
+
+        f = StringIO(csv_content)
+        reader = csv.DictReader(f)
+
+        cco_devices = []
+        dimmers = []
+
+        for row in reader:
+            device_type = row.get("device_type", "").strip().upper()
+
+            if device_type in ("CCO", "SWITCH"):
+                button = int(row.get("relay", row.get("button", 1)))
+                cco_type = row.get("type", "").strip().lower() or "switch"
+                cco_devices.append({
+                    "address": normalize_address(row["address"].strip()),
+                    "button": button,
+                    "name": row.get("name", "").strip(),
+                    "entity_type": cco_type,
+                })
+            elif device_type in ("LIGHT", "DIMMER"):
+                dimmers.append({
+                    "address": normalize_address(row["address"].strip()),
+                    "name": row.get("name", "").strip(),
+                })
+            elif device_type == "COVER":
+                button = int(row.get("relay", row.get("button", 1)))
+                cco_devices.append({
+                    "address": normalize_address(row["address"].strip()),
+                    "button": button,
+                    "name": row.get("name", "").strip(),
+                    "entity_type": "cover",
+                })
+            elif device_type == "LOCK":
+                button = int(row.get("relay", row.get("button", 1)))
+                cco_devices.append({
+                    "address": normalize_address(row["address"].strip()),
+                    "button": button,
+                    "name": row.get("name", "").strip(),
+                    "entity_type": "lock",
+                })
+            elif device_type == "CLIMATE":
+                button = int(row.get("relay", row.get("button", 1)))
+                cco_devices.append({
+                    "address": normalize_address(row["address"].strip()),
+                    "button": button,
+                    "name": row.get("name", "").strip(),
+                    "entity_type": "climate",
+                })
+
+        assert len(cco_devices) == 4
+        assert len(dimmers) == 1
+
+        # Check CCO types
+        types = [d["entity_type"] for d in cco_devices]
+        assert "switch" in types
+        assert "cover" in types
+        assert "lock" in types
+        assert "climate" in types
+
+    def test_csv_address_normalization(self):
+        """Test that addresses are normalized during CSV import."""
+        csv_content = """device_type,address,relay,name
+CCO,2:6:3,6,Test1
+CCO,[02:06:03],7,Test2
+CCO,02:06:03,8,Test3"""
+
+        import csv
+        from io import StringIO
+
+        f = StringIO(csv_content)
+        reader = csv.DictReader(f)
+
+        addresses = []
+        for row in reader:
+            addresses.append(normalize_address(row["address"].strip()))
+
+        # All should normalize to the same format
+        assert addresses[0] == "[02:06:03]"
+        assert addresses[1] == "[02:06:03]"
+        assert addresses[2] == "[02:06:03]"

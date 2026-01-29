@@ -14,6 +14,7 @@ class CCOEntityType(Enum):
     LIGHT = auto()
     LOCK = auto()
     COVER = auto()
+    CLIMATE = auto()
 
 
 @dataclass
