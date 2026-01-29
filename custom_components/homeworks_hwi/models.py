@@ -134,14 +134,17 @@ class CCODevice:
     def interpret_state(self, kls_digit: int) -> bool:
         """Interpret KLS digit as ON/OFF state.
 
-        KLS LED values: 0=OFF, 1=ON solid, 2=slow flash, 3=fast flash
-        For CCO feedback LEDs: LED OFF (0) typically means relay is CLOSED (device ON)
-        because the LED indicates "toggle available" not "current state".
+        KLS LED values for CCO feedback:
+        - 0 = not used/not applicable
+        - 1 = relay is OPEN (device OFF) - LED shows "close available"
+        - 2 = relay is CLOSED (device ON) - LED shows "open available"
+        - 3 = fast flash (not typically used for CCO)
+
         With inversion support for devices wired in reverse.
         """
-        # LED OFF (0) means relay is closed (device ON)
-        # LED ON (1) means relay is open (device OFF)
-        is_on = kls_digit == 0
+        # LED=2 means relay is closed (device ON)
+        # LED=1 means relay is open (device OFF)
+        is_on = kls_digit == 2
 
         if self.inverted:
             is_on = not is_on
@@ -243,15 +246,15 @@ class KLSState:
             window_offset: 0-indexed start of the 8-button window (default: 9)
 
         Returns:
-            True if relay is closed/ON (digit value is 1)
-            False if relay is open/OFF (digit value is 2 or other)
+            True if relay is closed/ON (digit value is 2)
+            False if relay is open/OFF (digit value is 1 or other)
 
         Example:
-            For "000000000222112110000000":
-            - Button 6 → index = 9 + 5 = 14 → digit '2' → False (OFF)
+            For "000000000221111110000000":
+            - Button 4 → index = 9 + 3 = 12 → digit '1' → False (OFF)
 
-            For "000000000222111110000000":
-            - Button 6 → index = 9 + 5 = 14 → digit '1' → True (ON)
+            For "000000000221211110000000":
+            - Button 4 → index = 9 + 3 = 12 → digit '2' → True (ON)
         """
         if not (1 <= button <= CCO_BUTTON_WINDOW_LENGTH):
             return False
@@ -262,8 +265,8 @@ class KLSState:
         if index >= len(self.led_states):
             return False
 
-        # 1 = ON (relay closed), anything else = OFF
-        return self.led_states[index] == 1
+        # 2 = ON (relay closed), 1 = OFF (relay open)
+        return self.led_states[index] == 2
 
 
 @dataclass
