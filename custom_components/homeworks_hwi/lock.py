@@ -150,11 +150,6 @@ class HomeworksCCOLock(CoordinatorEntity[HomeworksCoordinator], LockEntity):
         }
 
     @property
-    def name(self) -> str | None:
-        """Return the name of the lock."""
-        return self._device.name or None
-
-    @property
     def is_locked(self) -> bool:
         """Return True if the lock is locked.
 

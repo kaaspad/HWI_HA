@@ -158,11 +158,6 @@ class HomeworksCCOSwitch(CoordinatorEntity[HomeworksCoordinator], SwitchEntity):
         }
 
     @property
-    def name(self) -> str | None:
-        """Return the name of the switch."""
-        return self._device.name or None
-
-    @property
     def is_on(self) -> bool:
         """Return True if the switch is on.
 

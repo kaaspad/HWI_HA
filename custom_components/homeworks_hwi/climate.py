@@ -139,11 +139,6 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
         }
 
     @property
-    def name(self) -> str | None:
-        """Return the name of the climate device."""
-        return self._device.name or None
-
-    @property
     def hvac_mode(self) -> HVACMode:
         """Return current HVAC mode (heat when on, off when off)."""
         is_on = self.coordinator.get_cco_state(self._device.address)

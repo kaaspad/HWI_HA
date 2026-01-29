@@ -236,11 +236,6 @@ class HomeworksCCIBinarySensor(
         }
 
     @property
-    def name(self) -> str | None:
-        """Return the name of the binary sensor."""
-        return self._name or None
-
-    @property
     def is_on(self) -> bool:
         """Return True if the input is closed/on."""
         return self.coordinator.get_cci_state(self._address, self._input_number)

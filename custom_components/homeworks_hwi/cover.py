@@ -159,11 +159,6 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         }
 
     @property
-    def name(self) -> str | None:
-        """Return the name of the cover."""
-        return self._device.name or None
-
-    @property
     def is_closed(self) -> bool | None:
         """Return True if the cover is closed.
 
