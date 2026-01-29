@@ -121,11 +121,6 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
         }
 
     @property
-    def name(self) -> str | None:
-        """Return the name of the fan."""
-        return self._device.name or None
-
-    @property
     def is_on(self) -> bool:
         """Return True if the fan is on."""
         return self.coordinator.get_cco_state(self._device.address)
