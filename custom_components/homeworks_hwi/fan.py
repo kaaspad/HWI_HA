@@ -107,8 +107,7 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
 
         # Set up entity attributes
         self._entity_name = device.name
-        # Changed unique_id format to force new entity creation (v2)
-        self._attr_unique_id = f"hwi.{controller_id}.fan.{device.unique_id}.v2"
+        self._attr_unique_id = f"homeworks.{controller_id}.fan.{device.unique_id}.v2"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.fan.{device.address}")},
             name=device.name,
