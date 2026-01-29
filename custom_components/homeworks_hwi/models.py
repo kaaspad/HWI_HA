@@ -134,11 +134,14 @@ class CCODevice:
     def interpret_state(self, kls_digit: int) -> bool:
         """Interpret KLS digit as ON/OFF state.
 
-        Per protocol: In KLS output for CCOs, 1=ON (relay closed), 2=OFF (relay open)
+        KLS LED values: 0=OFF, 1=ON solid, 2=slow flash, 3=fast flash
+        For CCO feedback LEDs: LED OFF (0) typically means relay is CLOSED (device ON)
+        because the LED indicates "toggle available" not "current state".
         With inversion support for devices wired in reverse.
         """
-        # Standard interpretation: 1 = ON, 2 = OFF
-        is_on = kls_digit == 1
+        # LED OFF (0) means relay is closed (device ON)
+        # LED ON (1) means relay is open (device OFF)
+        is_on = kls_digit == 0
 
         if self.inverted:
             is_on = not is_on
