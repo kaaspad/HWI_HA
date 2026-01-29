@@ -148,6 +148,7 @@ class HomeworksCCOLock(CoordinatorEntity[HomeworksCoordinator], LockEntity):
             "homeworks_address": str(device.address),
             "inverted": device.inverted,
         }
+        self._attr_name = None  # Use device name only
 
     @property
     def is_locked(self) -> bool:

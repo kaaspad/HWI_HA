@@ -119,6 +119,7 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
             "button": device.address.button,
             "inverted": device.inverted,
         }
+        self._attr_name = None  # Use device name only
 
     @property
     def is_on(self) -> bool:
