@@ -11,6 +11,7 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -24,7 +25,6 @@ from .const import (
     CONF_COVERS,
     CONF_ENTITY_TYPE,
     CONF_INVERTED,
-    CONF_NAME,
     CONF_RELAY_NUMBER,
     CCO_TYPE_COVER,
     DEFAULT_COVER_NAME,

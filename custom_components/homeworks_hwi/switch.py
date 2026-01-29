@@ -7,6 +7,7 @@ from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -20,7 +21,6 @@ from .const import (
     CONF_CONTROLLER_ID,
     CONF_ENTITY_TYPE,
     CONF_INVERTED,
-    CONF_NAME,
     CONF_RELAY_NUMBER,
     CCO_TYPE_SWITCH,
     DEFAULT_SWITCH_NAME,
