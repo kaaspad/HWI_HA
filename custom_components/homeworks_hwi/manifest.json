@@ -1,13 +1,13 @@
 {
-  "domain": "homeworks",
-  "name": "Lutron Homeworks",
-  "codeowners": [],
+  "domain": "homeworks_hwi",
+  "name": "Lutron Homeworks HWI",
+  "codeowners": ["@kaaspad"],
   "config_flow": true,
   "documentation": "https://github.com/kaaspad/HWI_HA",
   "integration_type": "hub",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/kaaspad/HWI_HA/issues",
-  "loggers": ["custom_components.homeworks"],
+  "loggers": ["custom_components.homeworks_hwi"],
   "requirements": [],
   "version": "1.0.0"
 }

@@ -1,4 +1,4 @@
-# Lutron Homeworks Integration for Home Assistant
+# Lutron Homeworks HWI Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
@@ -29,14 +29,14 @@ A Home Assistant custom integration for Lutron Homeworks Series 4 and Series 8 l
 4. Add this repository URL: `https://github.com/kaaspad/HWI_HA`
 5. Select "Integration" as the category
 6. Click "Add"
-7. Search for "Lutron Homeworks" in HACS
+7. Search for "Lutron Homeworks HWI" in HACS
 8. Click "Download"
 9. Restart Home Assistant
 
 ### Manual Installation
 
 1. Download the latest release from GitHub
-2. Copy the `custom_components/homeworks` folder to your Home Assistant `config/custom_components/` directory
+2. Copy the `custom_components/homeworks_hwi` folder to your Home Assistant `config/custom_components/` directory
 3. Restart Home Assistant
 
 ## Configuration
@@ -44,7 +44,7 @@ A Home Assistant custom integration for Lutron Homeworks Series 4 and Series 8 l
 ### Initial Setup
 
 1. Go to **Settings** → **Devices & Services** → **Add Integration**
-2. Search for "Lutron Homeworks"
+2. Search for "Lutron Homeworks HWI"
 3. Enter the connection details:
    - **Controller Name**: A friendly name for this controller
    - **Host**: IP address or hostname of the processor
@@ -160,7 +160,7 @@ Add to `configuration.yaml`:
 logger:
   default: info
   logs:
-    custom_components.homeworks: debug
+    custom_components.homeworks_hwi: debug
 ```
 
 ## Services

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
-DOMAIN: Final = "homeworks"
+DOMAIN: Final = "homeworks_hwi"
 
 # Configuration keys
 CONF_CONTROLLER_ID: Final = "controller_id"
