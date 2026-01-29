@@ -179,11 +179,7 @@ class HomeworksCCOLock(CoordinatorEntity[HomeworksCoordinator], LockEntity):
             await self.coordinator.async_cco_open(self._device.address)
         else:
             await self.coordinator.async_cco_close(self._device.address)
-
-        # Request state update
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
+        # Optimistic state update is handled by coordinator
 
     async def async_unlock(self, **kwargs: Any) -> None:
         """Unlock the lock (open the CCO relay)."""
@@ -193,11 +189,7 @@ class HomeworksCCOLock(CoordinatorEntity[HomeworksCoordinator], LockEntity):
             await self.coordinator.async_cco_close(self._device.address)
         else:
             await self.coordinator.async_cco_open(self._device.address)
-
-        # Request state update
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
+        # Optimistic state update is handled by coordinator
 
     async def async_added_to_hass(self) -> None:
         """Register with coordinator when added to hass."""

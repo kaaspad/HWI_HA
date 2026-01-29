@@ -206,11 +206,7 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
             await self.coordinator.async_cco_close(self._device.address)
         else:
             await self.coordinator.async_cco_open(self._device.address)
-
-        # Request state update
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
+        # Optimistic state update is handled by coordinator
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
@@ -224,28 +220,18 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
             await self.coordinator.async_cco_open(self._device.address)
         else:
             await self.coordinator.async_cco_close(self._device.address)
-
-        # Request state update
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
+        # Optimistic state update is handled by coordinator
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover.
 
         For CCO covers, there may not be a direct stop command.
-        This implementation sends a quick pulse to stop.
+        This implementation clears movement flags only.
         """
         _LOGGER.debug("Stopping cover: %s", self._device.address)
         self._is_opening = False
         self._is_closing = False
         self.async_write_ha_state()
-
-        # Some covers stop when you pulse the same command
-        # This is hardware-dependent
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
 
     async def async_added_to_hass(self) -> None:
         """Register with coordinator when added to hass."""

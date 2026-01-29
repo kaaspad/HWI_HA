@@ -237,10 +237,7 @@ class HomeworksCCOLight(CoordinatorEntity[HomeworksCoordinator], LightEntity):
             await self.coordinator.async_cco_open(self._device.address)
         else:
             await self.coordinator.async_cco_close(self._device.address)
-
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
+        # Optimistic state update is handled by coordinator
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the light (open the CCO relay)."""
@@ -250,10 +247,7 @@ class HomeworksCCOLight(CoordinatorEntity[HomeworksCoordinator], LightEntity):
             await self.coordinator.async_cco_close(self._device.address)
         else:
             await self.coordinator.async_cco_open(self._device.address)
-
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
+        # Optimistic state update is handled by coordinator
 
     async def async_added_to_hass(self) -> None:
         """Register with coordinator when added to hass."""
