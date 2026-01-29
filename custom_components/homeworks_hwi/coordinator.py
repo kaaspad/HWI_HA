@@ -293,7 +293,12 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         normalized = normalize_address(address)
         self._keypad_led_states[normalized] = led_states
 
-        _LOGGER.debug("KLS update for %s: %s", normalized, led_states)
+        _LOGGER.debug(
+            "KLS update for %s: full=[%s] window_offset=%d",
+            normalized,
+            ",".join(str(x) for x in led_states),
+            self._kls_window_offset,
+        )
 
         # Parse the address to get processor/link/address
         try:
@@ -324,16 +329,20 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         new_state = device.interpret_state(led_value)
                         old_state = self._cco_states.get(key)
 
+                        _LOGGER.debug(
+                            "CCO %s (btn=%d idx=%d): LED=%d -> state=%s (was %s, inverted=%s)",
+                            device.name,
+                            button,
+                            index,
+                            led_value,
+                            new_state,
+                            old_state,
+                            device.inverted,
+                        )
+
                         if old_state != new_state:
                             self._cco_states[key] = new_state
                             state_changed = True
-                            _LOGGER.debug(
-                                "CCO %s state changed: %s -> %s (LED=%d)",
-                                device.address,
-                                old_state,
-                                new_state,
-                                led_value,
-                            )
 
         # Notify listeners if any state changed
         if state_changed:
