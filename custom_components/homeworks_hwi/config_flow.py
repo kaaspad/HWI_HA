@@ -47,13 +47,16 @@ from .const import (
     CONF_AREA,
     CONF_BUTTON_NUMBER,
     CONF_BUTTONS,
+    CONF_CCI_DEVICES,
     CONF_CCO_DEVICES,
     CONF_CCOS,
     CONF_CONTROLLER_ID,
     CONF_COVERS,
+    CONF_DEVICE_CLASS,
     CONF_DIMMERS,
     CONF_ENTITY_TYPE,
     CONF_INDEX,
+    CONF_INPUT_NUMBER,
     CONF_INVERTED,
     CONF_KEYPADS,
     CONF_KLS_POLL_INTERVAL,
@@ -71,6 +74,7 @@ from .const import (
     CCO_TYPE_LOCK,
     CCO_TYPE_SWITCH,
     DEFAULT_BUTTON_NAME,
+    DEFAULT_CCI_NAME,
     DEFAULT_CCO_NAME,
     DEFAULT_FADE_RATE,
     DEFAULT_KEYPAD_NAME,
@@ -623,12 +627,13 @@ async def validate_controller_settings(
 class DeviceImport(NamedTuple):
     """Device import from CSV."""
 
-    device_type: str
+    device_type: str  # CCO, DIMMER, or CCI
     address: str
-    button: int | None
+    button: int | None  # For CCO/CCI: button/input number
     name: str
-    entity_type: str | None = None  # For CCO: switch/light/cover/lock/climate
+    entity_type: str | None = None  # For CCO: switch/light/cover/lock/climate/fan
     area: str | None = None  # Home Assistant area ID
+    device_class: str | None = None  # For CCI: door/window/motion/etc.
 
 
 async def async_parse_csv(
@@ -724,6 +729,21 @@ async def async_parse_csv(
                         area,
                     )
                 )
+            elif device_type == "CCI":
+                # CCI (Contact Closure Input) - binary sensors
+                input_num = int(row.get("input", row.get("relay", row.get("button", 1))))
+                device_class = row.get("device_class", row.get("class", "")).strip().lower() or None
+                devices.append(
+                    DeviceImport(
+                        "CCI",
+                        normalize_address(row["address"].strip()),
+                        input_num,
+                        row.get("name", "").strip(),
+                        None,  # entity_type not used for CCI
+                        area,
+                        device_class,
+                    )
+                )
     except Exception as err:
         _LOGGER.exception("Error processing CSV")
         raise SchemaFlowError("invalid_csv") from err
@@ -760,6 +780,18 @@ def _is_duplicate_dimmer(handler: SchemaCommonFlowHandler, address: str) -> bool
     return False
 
 
+def _is_duplicate_cci(handler: SchemaCommonFlowHandler, address: str, input_number: int) -> bool:
+    """Check if a CCI device already exists."""
+    normalized = normalize_address(address)
+    for device in handler.options.get(CONF_CCI_DEVICES, []):
+        if (
+            normalize_address(device[CONF_ADDR]) == normalized
+            and device.get(CONF_INPUT_NUMBER, 1) == input_number
+        ):
+            return True
+    return False
+
+
 async def get_confirm_import_schema(handler: SchemaCommonFlowHandler) -> vol.Schema:
     """Return schema for confirming imports."""
     devices = handler.flow_state.get("import_devices", [])
@@ -775,7 +807,17 @@ async def get_confirm_import_schema(handler: SchemaCommonFlowHandler) -> vol.Sch
             else:
                 default_selected.append(str(idx))
             selections[str(idx)] = label
+        elif dev.device_type == "CCI":
+            is_dup = _is_duplicate_cci(handler, dev.address, dev.button or 1)
+            device_class = dev.device_class or "input"
+            label = f"CCI ({device_class}): {dev.name} ({dev.address}:{dev.button})"
+            if is_dup:
+                label += " [ALREADY EXISTS]"
+            else:
+                default_selected.append(str(idx))
+            selections[str(idx)] = label
         else:
+            # CCO device
             entity_type = dev.entity_type or "switch"
             is_dup = _is_duplicate_cco(handler, dev.address, dev.button or 1)
             label = f"CCO ({entity_type}): {dev.name} ({dev.address}:{dev.button})"
@@ -818,7 +860,29 @@ async def validate_confirm_import(
             if device.area:
                 dimmer_config[CONF_AREA] = device.area
             items.append(dimmer_config)
+        elif device.device_type == "CCI":
+            # Skip if duplicate
+            if _is_duplicate_cci(handler, device.address, device.button or 1):
+                skipped += 1
+                continue
+            _LOGGER.debug(
+                "Importing CCI device %s with device_class=%s",
+                device.name,
+                device.device_class,
+            )
+            items = handler.options.setdefault(CONF_CCI_DEVICES, [])
+            cci_config = {
+                CONF_ADDR: device.address,
+                CONF_INPUT_NUMBER: device.button or 1,
+                CONF_NAME: device.name or DEFAULT_CCI_NAME,
+            }
+            if device.device_class:
+                cci_config[CONF_DEVICE_CLASS] = device.device_class
+            if device.area:
+                cci_config[CONF_AREA] = device.area
+            items.append(cci_config)
         else:
+            # CCO device
             # Skip if duplicate
             if _is_duplicate_cco(handler, device.address, device.button or 1):
                 skipped += 1

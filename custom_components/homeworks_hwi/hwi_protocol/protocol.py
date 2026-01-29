@@ -18,6 +18,7 @@ from .messages import (
     AnyMessage,
     ButtonEventMessage,
     ButtonEventType,
+    CCIMessage,
     DimmerLevelMessage,
     GrafikEyeSceneMessage,
     KeypadEnableMessage,
@@ -43,6 +44,8 @@ IGNORED_MESSAGES = frozenset(
         "Keypad led monitoring enabled",
         "Keypad led monitoring disabled",
         "CCO monitoring enabled",
+        "CCI monitoring enabled",
+        "CCI monitoring disabled",
         "Cover monitoring enabled",
     }
 )
@@ -304,6 +307,40 @@ def _parse_svs(line: str, parts: list[str], ts: datetime) -> SivoiaSceneMessage 
     )
 
 
+def _parse_cci(line: str, parts: list[str], ts: datetime) -> CCIMessage | None:
+    """Parse CCI (Contact Closure Input) message.
+
+    Format: CCI, [pp:ll:aa], <input>, <state>
+    State can be: CLOSE/CLOSED/1 = closed, OPEN/0 = open
+    """
+    if len(parts) < 4:
+        return None
+
+    address = normalize_address(parts[1])
+    try:
+        input_number = int(parts[2])
+    except ValueError:
+        return None
+
+    # Parse state - could be CLOSE, CLOSED, OPEN, 1, 0
+    state_str = parts[3].upper()
+    if state_str in ("CLOSE", "CLOSED", "1", "ON"):
+        state = True
+    elif state_str in ("OPEN", "0", "OFF"):
+        state = False
+    else:
+        _LOGGER.warning("Unknown CCI state: %s", parts[3])
+        return None
+
+    return CCIMessage(
+        raw=line,
+        timestamp=ts,
+        address=address,
+        input_number=input_number,
+        state=state,
+    )
+
+
 # =============================================================================
 # Parser Registry
 # =============================================================================
@@ -335,4 +372,6 @@ _PARSERS: dict[str, Callable[[str, list[str], datetime], AnyMessage | None]] = {
     "GSS": _parse_gss,
     # Sivoia scene
     "SVS": _parse_svs,
+    # Contact Closure Input
+    "CCI": _parse_cci,
 }

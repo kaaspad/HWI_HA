@@ -217,6 +217,21 @@ class SivoiaSceneMessage(HomeworksMessage):
 
 
 @dataclass(frozen=True)
+class CCIMessage(HomeworksMessage):
+    """Contact Closure Input state change message.
+
+    Format: CCI, [pp:ll:aa], <input>, <state>
+
+    CCIs are physical inputs (switches, key contacts) that report
+    their state when changed. Used to trigger automations.
+    """
+
+    address: str  # Normalized [pp:ll:aa] format
+    input_number: int  # Input number (1-8 typically)
+    state: bool  # True = closed/on, False = open/off
+
+
+@dataclass(frozen=True)
 class UnknownMessage(HomeworksMessage):
     """Unknown or unparsed message."""
 
@@ -231,5 +246,6 @@ AnyMessage = (
     | KeypadEnableMessage
     | GrafikEyeSceneMessage
     | SivoiaSceneMessage
+    | CCIMessage
     | UnknownMessage
 )

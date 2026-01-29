@@ -37,6 +37,11 @@ CONF_COVERS: Final = "covers"
 # Lock-specific configuration
 CONF_LOCKS: Final = "locks"
 
+# CCI-specific configuration
+CONF_CCI_DEVICES: Final = "cci_devices"
+CONF_INPUT_NUMBER: Final = "input_number"
+CONF_DEVICE_CLASS: Final = "device_class"
+
 # Controller settings
 CONF_KLS_POLL_INTERVAL: Final = "kls_poll_interval"
 CONF_KLS_WINDOW_OFFSET: Final = "kls_window_offset"
@@ -51,6 +56,7 @@ DEFAULT_COVER_NAME: Final = "Homeworks Cover"
 DEFAULT_FAN_NAME: Final = "Homeworks Fan"
 DEFAULT_LOCK_NAME: Final = "Homeworks Lock"
 DEFAULT_SWITCH_NAME: Final = "Homeworks Switch"
+DEFAULT_CCI_NAME: Final = "Homeworks Input"
 
 # Polling intervals (in seconds)
 DEFAULT_KLS_POLL_INTERVAL: Final = 10
@@ -85,5 +91,6 @@ DIAG_RECONNECT_COUNT: Final = "reconnect_count"
 DIAG_POLL_FAILURE_COUNT: Final = "poll_failure_count"
 DIAG_PARSE_ERROR_COUNT: Final = "parse_error_count"
 DIAG_CCO_DEVICE_COUNT: Final = "cco_device_count"
+DIAG_CCI_DEVICE_COUNT: Final = "cci_device_count"
 DIAG_DIMMER_COUNT: Final = "dimmer_count"
 DIAG_KEYPAD_COUNT: Final = "keypad_count"
