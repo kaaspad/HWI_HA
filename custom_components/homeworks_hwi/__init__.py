@@ -34,6 +34,7 @@ from homeassistant.exceptions import (
 )
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import slugify
 
@@ -164,12 +165,47 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
+def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove old entities with legacy unique_id format.
+
+    This cleans up entities that were created with the old unique_id format
+    before the v2 suffix was added. Those entities may have cached doubled
+    names in the entity registry.
+    """
+    entity_registry = async_get_entity_registry(hass)
+    entities_to_remove = []
+
+    for entity_entry in list(entity_registry.entities.values()):
+        if entity_entry.config_entry_id != entry.entry_id:
+            continue
+        if entity_entry.platform != DOMAIN:
+            continue
+
+        # Check if this is an old-format unique_id (doesn't end with .v2)
+        unique_id = entity_entry.unique_id
+        if unique_id and not unique_id.endswith(".v2"):
+            # Check if it's one of our entity types that needs migration
+            if any(x in unique_id for x in [".fan.", ".cco.", ".ccolight.", ".lock.",
+                                             ".cover.", ".climate.", ".light.", ".cci."]):
+                entities_to_remove.append(entity_entry.entity_id)
+
+    for entity_id in entities_to_remove:
+        _LOGGER.info("Removing old entity with legacy unique_id: %s", entity_id)
+        entity_registry.async_remove(entity_id)
+
+    if entities_to_remove:
+        _LOGGER.info("Cleaned up %d old entities", len(entities_to_remove))
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Homeworks from a config entry.
 
     Credentials are read from entry.data (secrets).
     Devices and settings are read from entry.options (non-secrets).
     """
+    # Clean up old entities with legacy unique_id format
+    _cleanup_old_entities(hass, entry)
+
     hass.data.setdefault(DOMAIN, {})
 
     # Read credentials from entry.data

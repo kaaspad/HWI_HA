@@ -146,8 +146,8 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         self._is_opening = False
         self._is_closing = False
 
-        self._attr_unique_id = f"homeworks.{controller_id}.cover.{device.unique_id}"
-        self._attr_name = device.name
+        self._entity_name = device.name
+        self._attr_unique_id = f"homeworks.{controller_id}.cover.{device.unique_id}.v2"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.cover.{device.address}")},
             name=device.name,
@@ -157,6 +157,11 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         self._attr_extra_state_attributes = {
             "homeworks_address": str(device.address),
         }
+
+    @property
+    def name(self) -> str:
+        """Return the name of the entity."""
+        return self._entity_name
 
     @property
     def is_closed(self) -> bool | None:

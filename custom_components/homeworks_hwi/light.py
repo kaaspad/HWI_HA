@@ -125,8 +125,8 @@ class HomeworksDimmableLight(CoordinatorEntity[HomeworksCoordinator], LightEntit
         self._level = 0
         self._prev_level = 0
 
-        self._attr_unique_id = f"homeworks.{controller_id}.light.{self._addr}"
-        self._attr_name = name
+        self._entity_name = name
+        self._attr_unique_id = f"homeworks.{controller_id}.light.{self._addr}.v2"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.{self._addr}")},
             name=name,
@@ -134,6 +134,11 @@ class HomeworksDimmableLight(CoordinatorEntity[HomeworksCoordinator], LightEntit
             model="HomeWorks Dimmer",
         )
         self._attr_extra_state_attributes = {"homeworks_address": self._addr}
+
+    @property
+    def name(self) -> str:
+        """Return the name of the entity."""
+        return self._entity_name
 
     @property
     def brightness(self) -> int:
@@ -204,8 +209,8 @@ class HomeworksCCOLight(CoordinatorEntity[HomeworksCoordinator], LightEntity):
         self._device = device
         self._controller_id = controller_id
 
-        self._attr_unique_id = f"homeworks.{controller_id}.ccolight.{device.unique_id}"
-        self._attr_name = device.name
+        self._entity_name = device.name
+        self._attr_unique_id = f"homeworks.{controller_id}.ccolight.{device.unique_id}.v2"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.ccolight.{device.address}")},
             name=device.name,
@@ -216,6 +221,11 @@ class HomeworksCCOLight(CoordinatorEntity[HomeworksCoordinator], LightEntity):
             "homeworks_address": str(device.address),
             "inverted": device.inverted,
         }
+
+    @property
+    def name(self) -> str:
+        """Return the name of the entity."""
+        return self._entity_name
 
     @property
     def is_on(self) -> bool:
