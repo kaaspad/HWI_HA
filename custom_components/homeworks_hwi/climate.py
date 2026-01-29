@@ -108,9 +108,10 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
 
     _attr_has_entity_name = True
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
-    _attr_supported_features = ClimateEntityFeature(0)  # No features, just on/off
+    _attr_supported_features = (
+        ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
+    )
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _enable_turn_on_off_backwards_compat = False
 
     def __init__(
         self,
@@ -161,11 +162,11 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set HVAC mode (heat = on, off = off)."""
         if hvac_mode == HVACMode.HEAT:
-            await self._async_turn_on()
+            await self.async_turn_on()
         else:
-            await self._async_turn_off()
+            await self.async_turn_off()
 
-    async def _async_turn_on(self) -> None:
+    async def async_turn_on(self) -> None:
         """Turn on the climate device (close the CCO relay)."""
         _LOGGER.debug("Turning on CCO climate: %s", self._device.address)
 
@@ -173,13 +174,9 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
             await self.coordinator.async_cco_open(self._device.address)
         else:
             await self.coordinator.async_cco_close(self._device.address)
+        # Optimistic state update is handled by coordinator
 
-        # Request immediate state update
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
-
-    async def _async_turn_off(self) -> None:
+    async def async_turn_off(self) -> None:
         """Turn off the climate device (open the CCO relay)."""
         _LOGGER.debug("Turning off CCO climate: %s", self._device.address)
 
@@ -187,11 +184,7 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
             await self.coordinator.async_cco_close(self._device.address)
         else:
             await self.coordinator.async_cco_open(self._device.address)
-
-        # Request immediate state update
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
+        # Optimistic state update is handled by coordinator
 
     async def async_added_to_hass(self) -> None:
         """Register for coordinator updates when added to hass."""

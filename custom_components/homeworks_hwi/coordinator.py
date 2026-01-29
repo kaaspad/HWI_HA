@@ -388,15 +388,39 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Close a CCO relay (turn on)."""
         if not self._client:
             return False
-        return await self._client.cco_close(
+        result = await self._client.cco_close(
             address.to_command_address(), address.button
         )
+        if result:
+            # Optimistic state update - assume command succeeded
+            self._cco_states[address.unique_key] = True
+            self.async_set_updated_data(
+                {
+                    "cco_states": dict(self._cco_states),
+                    "dimmer_states": dict(self._dimmer_states),
+                    "connected": self.connected,
+                }
+            )
+        return result
 
     async def async_cco_open(self, address: CCOAddress) -> bool:
         """Open a CCO relay (turn off)."""
         if not self._client:
             return False
-        return await self._client.cco_open(address.to_command_address(), address.button)
+        result = await self._client.cco_open(
+            address.to_command_address(), address.button
+        )
+        if result:
+            # Optimistic state update - assume command succeeded
+            self._cco_states[address.unique_key] = False
+            self.async_set_updated_data(
+                {
+                    "cco_states": dict(self._cco_states),
+                    "dimmer_states": dict(self._dimmer_states),
+                    "connected": self.connected,
+                }
+            )
+        return result
 
     async def async_fade_dim(
         self,

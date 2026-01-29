@@ -93,7 +93,7 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
     """
 
     _attr_has_entity_name = True
-    _attr_supported_features = FanEntityFeature(0)  # No features, just on/off
+    _attr_supported_features = FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
 
     def __init__(
         self,
@@ -148,11 +148,7 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
             await self.coordinator.async_cco_open(self._device.address)
         else:
             await self.coordinator.async_cco_close(self._device.address)
-
-        # Request immediate state update
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
+        # Optimistic state update is handled by coordinator
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the fan (open the CCO relay)."""
@@ -162,11 +158,7 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
             await self.coordinator.async_cco_close(self._device.address)
         else:
             await self.coordinator.async_cco_open(self._device.address)
-
-        # Request immediate state update
-        await self.coordinator.async_request_keypad_led_states(
-            self._device.address.to_kls_address()
-        )
+        # Optimistic state update is handled by coordinator
 
     async def async_added_to_hass(self) -> None:
         """Register for coordinator updates when added to hass."""
