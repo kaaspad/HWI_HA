@@ -9,5 +9,5 @@
   "issue_tracker": "https://github.com/kaaspad/HWI_HA/issues",
   "loggers": ["custom_components.homeworks_hwi"],
   "requirements": [],
-  "version": "1.2.2"
+  "version": "1.2.3"
 }
