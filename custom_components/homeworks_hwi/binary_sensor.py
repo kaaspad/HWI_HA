@@ -6,6 +6,7 @@ import logging
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -18,7 +19,6 @@ from .const import (
     CONF_CONTROLLER_ID,
     CONF_KEYPADS,
     CONF_LED,
-    CONF_NAME,
     CONF_NUMBER,
     DOMAIN,
 )
