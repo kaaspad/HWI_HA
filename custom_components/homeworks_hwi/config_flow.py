@@ -626,6 +626,7 @@ class DeviceImport(NamedTuple):
     button: int | None
     name: str
     entity_type: str | None = None  # For CCO: switch/light/cover/lock/climate
+    area: str | None = None  # Home Assistant area ID
 
 
 async def async_parse_csv(
@@ -642,6 +643,8 @@ async def async_parse_csv(
             device_type = row.get("device_type", "").strip().upper()
             # Get optional entity type for CCO devices (switch/light/cover/lock/climate)
             cco_type = row.get("type", "").strip().lower() or None
+            # Get optional area
+            area = row.get("area", "").strip() or None
 
             if device_type in ("CCO", "SWITCH"):
                 button = int(row.get("relay", row.get("button", 1)))
@@ -657,6 +660,7 @@ async def async_parse_csv(
                         button,
                         row.get("name", "").strip(),
                         entity_type,
+                        area,
                     )
                 )
             elif device_type in ("LIGHT", "DIMMER"):
@@ -667,6 +671,7 @@ async def async_parse_csv(
                         None,
                         row.get("name", "").strip(),
                         None,
+                        area,
                     )
                 )
             elif device_type == "COVER":
@@ -678,6 +683,7 @@ async def async_parse_csv(
                         button,
                         row.get("name", "").strip(),
                         CCO_TYPE_COVER,
+                        area,
                     )
                 )
             elif device_type == "LOCK":
@@ -689,6 +695,7 @@ async def async_parse_csv(
                         button,
                         row.get("name", "").strip(),
                         CCO_TYPE_LOCK,
+                        area,
                     )
                 )
             elif device_type == "CLIMATE":
@@ -700,6 +707,7 @@ async def async_parse_csv(
                         button,
                         row.get("name", "").strip(),
                         CCO_TYPE_CLIMATE,
+                        area,
                     )
                 )
     except Exception as err:
@@ -788,13 +796,14 @@ async def validate_confirm_import(
                 skipped += 1
                 continue
             items = handler.options.setdefault(CONF_DIMMERS, [])
-            items.append(
-                {
-                    CONF_ADDR: device.address,
-                    CONF_NAME: device.name or DEFAULT_LIGHT_NAME,
-                    CONF_RATE: DEFAULT_FADE_RATE,
-                }
-            )
+            dimmer_config = {
+                CONF_ADDR: device.address,
+                CONF_NAME: device.name or DEFAULT_LIGHT_NAME,
+                CONF_RATE: DEFAULT_FADE_RATE,
+            }
+            if device.area:
+                dimmer_config[CONF_AREA] = device.area
+            items.append(dimmer_config)
         else:
             # Skip if duplicate
             if _is_duplicate_cco(handler, device.address, device.button or 1):
@@ -803,15 +812,16 @@ async def validate_confirm_import(
             # Use entity_type from CSV if provided, otherwise default to switch
             entity_type = device.entity_type or CCO_TYPE_SWITCH
             items = handler.options.setdefault(CONF_CCO_DEVICES, [])
-            items.append(
-                {
-                    CONF_ADDR: device.address,
-                    CONF_BUTTON_NUMBER: device.button or 1,
-                    CONF_NAME: device.name or DEFAULT_CCO_NAME,
-                    CONF_ENTITY_TYPE: entity_type,
-                    CONF_INVERTED: False,
-                }
-            )
+            cco_config = {
+                CONF_ADDR: device.address,
+                CONF_BUTTON_NUMBER: device.button or 1,
+                CONF_NAME: device.name or DEFAULT_CCO_NAME,
+                CONF_ENTITY_TYPE: entity_type,
+                CONF_INVERTED: False,
+            }
+            if device.area:
+                cco_config[CONF_AREA] = device.area
+            items.append(cco_config)
 
     return {}
 
