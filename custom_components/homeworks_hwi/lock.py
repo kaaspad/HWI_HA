@@ -124,8 +124,6 @@ class HomeworksCCOLock(CoordinatorEntity[HomeworksCoordinator], LockEntity):
     - Unlocked = CCO relay open (OFF state)
     """
 
-    _attr_has_entity_name = True
-
     def __init__(
         self,
         coordinator: HomeworksCoordinator,
@@ -138,6 +136,7 @@ class HomeworksCCOLock(CoordinatorEntity[HomeworksCoordinator], LockEntity):
         self._controller_id = controller_id
 
         self._attr_unique_id = f"homeworks.{controller_id}.lock.{device.unique_id}"
+        self._attr_name = device.name
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.lock.{device.address}")},
             name=device.name,
@@ -148,7 +147,6 @@ class HomeworksCCOLock(CoordinatorEntity[HomeworksCoordinator], LockEntity):
             "homeworks_address": str(device.address),
             "inverted": device.inverted,
         }
-        self._attr_name = None  # Use device name only
 
     @property
     def is_locked(self) -> bool:

@@ -128,7 +128,6 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
     Position tracking is not available without additional hardware feedback.
     """
 
-    _attr_has_entity_name = True
     _attr_device_class = CoverDeviceClass.SHADE
     _attr_supported_features = (
         CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
@@ -148,6 +147,7 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         self._is_closing = False
 
         self._attr_unique_id = f"homeworks.{controller_id}.cover.{device.unique_id}"
+        self._attr_name = device.name
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.cover.{device.address}")},
             name=device.name,
@@ -157,7 +157,6 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         self._attr_extra_state_attributes = {
             "homeworks_address": str(device.address),
         }
-        self._attr_name = None  # Use device name only
 
     @property
     def is_closed(self) -> bool | None:

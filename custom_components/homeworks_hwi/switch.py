@@ -130,8 +130,6 @@ class HomeworksCCOSwitch(CoordinatorEntity[HomeworksCoordinator], SwitchEntity):
     State is derived from the central KLS state engine in the coordinator.
     """
 
-    _attr_has_entity_name = True
-
     def __init__(
         self,
         coordinator: HomeworksCoordinator,
@@ -145,6 +143,7 @@ class HomeworksCCOSwitch(CoordinatorEntity[HomeworksCoordinator], SwitchEntity):
 
         # Set up entity attributes
         self._attr_unique_id = f"homeworks.{controller_id}.cco.{device.unique_id}"
+        self._attr_name = device.name
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.cco.{device.address}")},
             name=device.name,
@@ -156,7 +155,6 @@ class HomeworksCCOSwitch(CoordinatorEntity[HomeworksCoordinator], SwitchEntity):
             "button": device.address.button,
             "inverted": device.inverted,
         }
-        self._attr_name = None  # Use device name only
 
     @property
     def is_on(self) -> bool:
