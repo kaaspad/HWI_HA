@@ -105,10 +105,16 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
         self._device = device
         self._controller_id = controller_id
 
-        # Set up entity attributes - store name for entity_id generation
+        # Set up entity attributes
         self._entity_name = device.name
-        self._attr_unique_id = f"homeworks.{controller_id}.fan.{device.unique_id}"
-        # Temporarily removed device_info to debug entity_id doubling
+        # Changed unique_id format to force new entity creation (v2)
+        self._attr_unique_id = f"hwi.{controller_id}.fan.{device.unique_id}.v2"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{controller_id}.fan.{device.address}")},
+            name=device.name,
+            manufacturer="Lutron",
+            model="HomeWorks CCO Fan",
+        )
         self._attr_extra_state_attributes = {
             "homeworks_address": str(device.address),
             "button": device.address.button,
