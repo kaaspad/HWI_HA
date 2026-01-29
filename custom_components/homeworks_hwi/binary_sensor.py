@@ -150,7 +150,7 @@ class HomeworksLEDBinarySensor(
         self._led_number = led_number
 
         self._attr_unique_id = (
-            f"homeworks.{controller_id}.led.{keypad_addr}.{led_number}"
+            f"homeworks.{controller_id}.led.{keypad_addr}.{led_number}.v2"
         )
         self._attr_name = button_name
         self._attr_device_info = DeviceInfo(

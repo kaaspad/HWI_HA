@@ -181,13 +181,13 @@ def _cleanup_old_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
         if entity_entry.platform != DOMAIN:
             continue
 
-        # Check if this is an old-format unique_id (doesn't end with .v2)
+        # Remove ALL entities that don't end with .v2
+        # This ensures we catch everything regardless of unique_id pattern
         unique_id = entity_entry.unique_id
         if unique_id and not unique_id.endswith(".v2"):
-            # Check if it's one of our entity types that needs migration
-            if any(x in unique_id for x in [".fan.", ".cco.", ".ccolight.", ".lock.",
-                                             ".cover.", ".climate.", ".light.", ".cci."]):
-                entities_to_remove.append(entity_entry.entity_id)
+            entities_to_remove.append(entity_entry.entity_id)
+            _LOGGER.debug("Marking for removal: %s (unique_id: %s)",
+                         entity_entry.entity_id, unique_id)
 
     for entity_id in entities_to_remove:
         _LOGGER.info("Removing old entity with legacy unique_id: %s", entity_id)
@@ -415,7 +415,7 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 def calculate_unique_id(controller_id: str, addr: str, idx: int) -> str:
     """Calculate entity unique id."""
-    return f"homeworks.{controller_id}.{addr}.{idx}"
+    return f"homeworks.{controller_id}.{addr}.{idx}.v2"
 
 
 class HomeworksEntity(Entity):
