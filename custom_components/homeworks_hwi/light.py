@@ -134,7 +134,7 @@ class HomeworksDimmableLight(CoordinatorEntity[HomeworksCoordinator], LightEntit
             model="HomeWorks Dimmer",
         )
         self._attr_extra_state_attributes = {"homeworks_address": self._addr}
-        # Don't set _attr_name - with _attr_has_entity_name=True, the device name is used
+        self._attr_name = None  # Use device name only
 
     @property
     def brightness(self) -> int:
@@ -217,7 +217,7 @@ class HomeworksCCOLight(CoordinatorEntity[HomeworksCoordinator], LightEntity):
             "homeworks_address": str(device.address),
             "inverted": device.inverted,
         }
-        # Don't set _attr_name - with _attr_has_entity_name=True, the device name is used
+        self._attr_name = None  # Use device name only
 
     @property
     def is_on(self) -> bool:

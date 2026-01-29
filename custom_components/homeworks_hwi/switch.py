@@ -156,6 +156,7 @@ class HomeworksCCOSwitch(CoordinatorEntity[HomeworksCoordinator], SwitchEntity):
             "button": device.address.button,
             "inverted": device.inverted,
         }
+        self._attr_name = None  # Use device name only
 
     @property
     def is_on(self) -> bool:

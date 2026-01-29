@@ -234,6 +234,7 @@ class HomeworksCCIBinarySensor(
             "homeworks_address": self._address,
             "input_number": input_number,
         }
+        self._attr_name = None  # Use device name only
 
     @property
     def is_on(self) -> bool:

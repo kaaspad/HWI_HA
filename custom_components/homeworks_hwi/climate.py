@@ -137,6 +137,7 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
             "button": device.address.button,
             "inverted": device.inverted,
         }
+        self._attr_name = None  # Use device name only
 
     @property
     def hvac_mode(self) -> HVACMode:

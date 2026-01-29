@@ -157,6 +157,7 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         self._attr_extra_state_attributes = {
             "homeworks_address": str(device.address),
         }
+        self._attr_name = None  # Use device name only
 
     @property
     def is_closed(self) -> bool | None:
