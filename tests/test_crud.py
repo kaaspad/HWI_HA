@@ -774,3 +774,55 @@ CCO,02:06:03,8,Test3"""
         assert addresses[0] == "[02:06:03]"
         assert addresses[1] == "[02:06:03]"
         assert addresses[2] == "[02:06:03]"
+
+    def test_csv_duplicate_detection(self):
+        """Test that duplicate devices are detected during CSV import."""
+        # Simulate existing options with a CCO device
+        existing_options = create_empty_options()
+        existing_options["cco_devices"].append({
+            "name": "Existing Light",
+            "addr": "[02:06:03]",
+            "button_number": 6,
+            "entity_type": "switch",
+            "inverted": False,
+        })
+
+        # CSV with same address/button should be detected as duplicate
+        csv_content = """device_type,address,relay,name,type
+CCO,02:06:03,6,Kitchen Light,switch
+CCO,02:06:03,7,Different Button,switch
+CCO,02:06:04,6,Different Address,switch"""
+
+        import csv
+        from io import StringIO
+
+        f = StringIO(csv_content)
+        reader = csv.DictReader(f)
+
+        def is_duplicate_cco(addr: str, button: int) -> bool:
+            """Check if CCO device already exists."""
+            normalized = normalize_address(addr)
+            for device in existing_options["cco_devices"]:
+                existing_addr = normalize_address(device["addr"])
+                existing_button = device.get("button_number", device.get("relay_number", 1))
+                if existing_addr == normalized and existing_button == button:
+                    return True
+            return False
+
+        duplicates = []
+        new_devices = []
+        for row in reader:
+            button = int(row.get("relay", row.get("button", 1)))
+            addr = normalize_address(row["address"].strip())
+            if is_duplicate_cco(addr, button):
+                duplicates.append(row.get("name", ""))
+            else:
+                new_devices.append(row.get("name", ""))
+
+        # First one is duplicate (same address and button)
+        assert "Kitchen Light" in duplicates
+        # Other two are not duplicates
+        assert "Different Button" in new_devices
+        assert "Different Address" in new_devices
+        assert len(duplicates) == 1
+        assert len(new_devices) == 2

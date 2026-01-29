@@ -713,22 +713,59 @@ async def async_parse_csv(
     return {}
 
 
+def _is_duplicate_cco(handler: SchemaCommonFlowHandler, address: str, button: int) -> bool:
+    """Check if a CCO device already exists."""
+    try:
+        new_addr = _validate_cco_address(address, button)
+        for device in handler.options.get(CONF_CCO_DEVICES, []):
+            existing_addr = _validate_cco_address(
+                device[CONF_ADDR],
+                device.get(CONF_BUTTON_NUMBER, device.get(CONF_RELAY_NUMBER, 1)),
+            )
+            if existing_addr.unique_key == new_addr.unique_key:
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def _is_duplicate_dimmer(handler: SchemaCommonFlowHandler, address: str) -> bool:
+    """Check if a dimmer already exists."""
+    normalized = normalize_address(address)
+    for dimmer in handler.options.get(CONF_DIMMERS, []):
+        if normalize_address(dimmer[CONF_ADDR]) == normalized:
+            return True
+    return False
+
+
 async def get_confirm_import_schema(handler: SchemaCommonFlowHandler) -> vol.Schema:
     """Return schema for confirming imports."""
     devices = handler.flow_state.get("import_devices", [])
     selections = {}
+    default_selected = []
+
     for idx, dev in enumerate(devices):
         if dev.device_type == "DIMMER":
-            selections[str(idx)] = f"Dimmer: {dev.name} ({dev.address})"
+            is_dup = _is_duplicate_dimmer(handler, dev.address)
+            label = f"Dimmer: {dev.name} ({dev.address})"
+            if is_dup:
+                label += " [ALREADY EXISTS]"
+            else:
+                default_selected.append(str(idx))
+            selections[str(idx)] = label
         else:
             entity_type = dev.entity_type or "switch"
-            selections[str(idx)] = (
-                f"CCO ({entity_type}): {dev.name} ({dev.address}:{dev.button})"
-            )
+            is_dup = _is_duplicate_cco(handler, dev.address, dev.button or 1)
+            label = f"CCO ({entity_type}): {dev.name} ({dev.address}:{dev.button})"
+            if is_dup:
+                label += " [ALREADY EXISTS]"
+            else:
+                default_selected.append(str(idx))
+            selections[str(idx)] = label
 
     return vol.Schema(
         {
-            vol.Optional("devices", default=list(selections.keys())): cv.multi_select(
+            vol.Optional("devices", default=default_selected): cv.multi_select(
                 selections
             )
         }
@@ -738,13 +775,18 @@ async def get_confirm_import_schema(handler: SchemaCommonFlowHandler) -> vol.Sch
 async def validate_confirm_import(
     handler: SchemaCommonFlowHandler, user_input: dict[str, Any]
 ) -> dict[str, Any]:
-    """Process selected devices."""
+    """Process selected devices, skipping duplicates."""
     devices = handler.flow_state.get("import_devices", [])
     selected = user_input.get("devices", [])
+    skipped = 0
 
     for idx in selected:
         device = devices[int(idx)]
         if device.device_type == "DIMMER":
+            # Skip if duplicate
+            if _is_duplicate_dimmer(handler, device.address):
+                skipped += 1
+                continue
             items = handler.options.setdefault(CONF_DIMMERS, [])
             items.append(
                 {
@@ -754,6 +796,10 @@ async def validate_confirm_import(
                 }
             )
         else:
+            # Skip if duplicate
+            if _is_duplicate_cco(handler, device.address, device.button or 1):
+                skipped += 1
+                continue
             # Use entity_type from CSV if provided, otherwise default to switch
             entity_type = device.entity_type or CCO_TYPE_SWITCH
             items = handler.options.setdefault(CONF_CCO_DEVICES, [])
