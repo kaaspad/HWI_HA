@@ -20,6 +20,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import HomeworksData
 from .const import (
     CONF_ADDR,
+    CONF_AREA,
     CONF_BUTTON_NUMBER,
     CONF_CCO_DEVICES,
     CONF_CONTROLLER_ID,
@@ -56,6 +57,7 @@ async def async_setup_entry(
             addr=dimmer[CONF_ADDR],
             name=dimmer.get(CONF_NAME, DEFAULT_LIGHT_NAME),
             rate=dimmer.get(CONF_RATE, DEFAULT_FADE_RATE),
+            area=dimmer.get(CONF_AREA),
         )
         entities.append(entity)
 
@@ -83,6 +85,7 @@ async def async_setup_entry(
                 name=device_config.get(CONF_NAME, DEFAULT_LIGHT_NAME),
                 entity_type=CCOEntityType.LIGHT,
                 inverted=device_config.get(CONF_INVERTED, False),
+                area=device_config.get(CONF_AREA),
             )
 
             entity = HomeworksCCOLight(
@@ -116,6 +119,7 @@ class HomeworksDimmableLight(CoordinatorEntity[HomeworksCoordinator], LightEntit
         addr: str,
         name: str,
         rate: float,
+        area: str | None = None,
     ) -> None:
         """Create device with Addr, name, and rate."""
         super().__init__(coordinator)
@@ -127,12 +131,15 @@ class HomeworksDimmableLight(CoordinatorEntity[HomeworksCoordinator], LightEntit
 
         self._entity_name = name
         self._attr_unique_id = f"homeworks.{controller_id}.light.{self._addr}.v2"
-        self._attr_device_info = DeviceInfo(
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.{self._addr}")},
             name=name,
             manufacturer="Lutron",
             model="HomeWorks Dimmer",
         )
+        if area:
+            device_info["suggested_area"] = area
+        self._attr_device_info = device_info
         self._attr_extra_state_attributes = {"homeworks_address": self._addr}
 
     @property
@@ -211,12 +218,15 @@ class HomeworksCCOLight(CoordinatorEntity[HomeworksCoordinator], LightEntity):
 
         self._entity_name = device.name
         self._attr_unique_id = f"homeworks.{controller_id}.ccolight.{device.unique_id}.v2"
-        self._attr_device_info = DeviceInfo(
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.ccolight.{device.address}")},
             name=device.name,
             manufacturer="Lutron",
             model="HomeWorks CCO Light",
         )
+        if device.area:
+            device_info["suggested_area"] = device.area
+        self._attr_device_info = device_info
         self._attr_extra_state_attributes = {
             "homeworks_address": str(device.address),
             "inverted": device.inverted,
