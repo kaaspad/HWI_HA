@@ -201,8 +201,6 @@ class HomeworksCCIBinarySensor(
     its state when changed. Used to trigger Home Assistant automations.
     """
 
-    _attr_has_entity_name = True
-
     def __init__(
         self,
         coordinator: HomeworksCoordinator,
@@ -217,12 +215,13 @@ class HomeworksCCIBinarySensor(
         self._address = normalize_address(address)
         self._input_number = input_number
         self._controller_id = controller_id
-        self._name = name
+        self._sensor_name = name
         self._unregister_callback: callable[[], None] | None = None
 
         # Set up entity attributes
         addr_clean = self._address.replace(":", "_").strip("[]")
         self._attr_unique_id = f"homeworks.{controller_id}.cci.{addr_clean}_{input_number}"
+        self._attr_name = name
         self._attr_device_class = device_class
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.cci.{self._address}_{input_number}")},
@@ -234,7 +233,6 @@ class HomeworksCCIBinarySensor(
             "homeworks_address": self._address,
             "input_number": input_number,
         }
-        self._attr_name = None  # Use device name only
 
     @property
     def is_on(self) -> bool:

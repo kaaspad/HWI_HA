@@ -92,7 +92,6 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
     State is derived from the central KLS state engine in the coordinator.
     """
 
-    _attr_has_entity_name = True
     _attr_supported_features = FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
 
     def __init__(
@@ -108,6 +107,7 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
 
         # Set up entity attributes
         self._attr_unique_id = f"homeworks.{controller_id}.fan.{device.unique_id}"
+        self._attr_name = device.name
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.fan.{device.address}")},
             name=device.name,
@@ -119,7 +119,6 @@ class HomeworksCCOFan(CoordinatorEntity[HomeworksCoordinator], FanEntity):
             "button": device.address.button,
             "inverted": device.inverted,
         }
-        self._attr_name = None  # Use device name only
 
     @property
     def is_on(self) -> bool:

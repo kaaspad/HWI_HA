@@ -106,7 +106,6 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
     State is derived from the central KLS state engine in the coordinator.
     """
 
-    _attr_has_entity_name = True
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
     _attr_supported_features = (
         ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
@@ -126,6 +125,7 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
 
         # Set up entity attributes
         self._attr_unique_id = f"homeworks.{controller_id}.climate.{device.unique_id}"
+        self._attr_name = device.name
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.climate.{device.address}")},
             name=device.name,
@@ -137,7 +137,6 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
             "button": device.address.button,
             "inverted": device.inverted,
         }
-        self._attr_name = None  # Use device name only
 
     @property
     def hvac_mode(self) -> HVACMode:
