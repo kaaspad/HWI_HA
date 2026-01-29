@@ -10,7 +10,7 @@ Main components:
 - Command builders: Functions to construct protocol commands
 
 Example:
-    from pyhomeworks import HomeworksClient, KLSMessage
+    from .hwi_protocol import HomeworksClient, KLSMessage
 
     async def on_message(msg):
         if isinstance(msg, KLSMessage):

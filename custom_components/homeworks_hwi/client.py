@@ -12,7 +12,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from pyhomeworks import (
+from .hwi_protocol import (
     HomeworksClient as PyHomeworksClient,
     KLSMessage,
     DimmerLevelMessage,
