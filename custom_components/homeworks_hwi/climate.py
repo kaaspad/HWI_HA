@@ -46,8 +46,18 @@ async def async_setup_entry(
     entities: list[HomeworksCCOClimate] = []
 
     # CCO devices with type=climate
+    _LOGGER.debug(
+        "Climate platform checking %d CCO devices",
+        len(entry.options.get(CONF_CCO_DEVICES, [])),
+    )
     for device_config in entry.options.get(CONF_CCO_DEVICES, []):
-        if device_config.get(CONF_ENTITY_TYPE) != CCO_TYPE_CLIMATE:
+        entity_type = device_config.get(CONF_ENTITY_TYPE)
+        _LOGGER.debug(
+            "Climate platform checking device %s: entity_type=%s",
+            device_config.get(CONF_NAME, "unknown"),
+            entity_type,
+        )
+        if entity_type != CCO_TYPE_CLIMATE:
             continue
 
         try:
