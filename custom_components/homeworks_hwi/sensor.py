@@ -58,7 +58,7 @@ class HomeworksHealthSensor(CoordinatorEntity[HomeworksCoordinator], SensorEntit
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._controller_id = controller_id
-        self._attr_unique_id = f"homeworks.{controller_id}.health.{sensor_type}"
+        self._attr_unique_id = f"homeworks.{controller_id}.health.{sensor_type}.v2"
         self._attr_name = name
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.controller")},

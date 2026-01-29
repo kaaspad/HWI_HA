@@ -81,7 +81,7 @@ class HomeworksButton(ButtonEntity):
         self._release_delay = release_delay
 
         self._attr_unique_id = (
-            f"homeworks.{controller_id}.button.{keypad_addr}.{button_number}"
+            f"homeworks.{controller_id}.button.{keypad_addr}.{button_number}.v2"
         )
         self._attr_name = button_name
         self._attr_device_info = DeviceInfo(
