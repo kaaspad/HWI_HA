@@ -20,6 +20,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import HomeworksData
 from .const import (
     CONF_ADDR,
+    CONF_AREA,
     CONF_BUTTON_NUMBER,
     CONF_CCO_DEVICES,
     CONF_CONTROLLER_ID,
@@ -70,6 +71,7 @@ async def async_setup_entry(
                 name=device_config.get(CONF_NAME, DEFAULT_COVER_NAME),
                 entity_type=CCOEntityType.COVER,
                 inverted=device_config.get(CONF_INVERTED, False),
+                area=device_config.get(CONF_AREA),
             )
 
             entity = HomeworksCCOCover(
@@ -102,6 +104,7 @@ async def async_setup_entry(
                 name=cover_config.get(CONF_NAME, DEFAULT_COVER_NAME),
                 entity_type=CCOEntityType.COVER,
                 inverted=cover_config.get(CONF_INVERTED, False),
+                area=cover_config.get(CONF_AREA),
             )
 
             entity = HomeworksCCOCover(
@@ -148,12 +151,15 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
 
         self._entity_name = device.name
         self._attr_unique_id = f"homeworks.{controller_id}.cover.{device.unique_id}.v2"
-        self._attr_device_info = DeviceInfo(
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.cover.{device.address}")},
             name=device.name,
             manufacturer="Lutron",
             model="HomeWorks Cover",
         )
+        if device.area:
+            device_info["suggested_area"] = device.area
+        self._attr_device_info = device_info
         self._attr_extra_state_attributes = {
             "homeworks_address": str(device.address),
         }
