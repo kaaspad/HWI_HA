@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import HomeworksData
 from .const import (
     CONF_ADDR,
+    CONF_BUTTON_NUMBER,
     CONF_CCO_DEVICES,
     CONF_CCOS,
     CONF_CONTROLLER_ID,
@@ -48,7 +49,10 @@ async def async_setup_entry(
 
         try:
             addr_str = device_config[CONF_ADDR]
-            button = device_config.get(CONF_RELAY_NUMBER, 1)
+            # Check CONF_BUTTON_NUMBER (new) then CONF_RELAY_NUMBER (legacy)
+            button = device_config.get(
+                CONF_BUTTON_NUMBER, device_config.get(CONF_RELAY_NUMBER, 1)
+            )
 
             # Handle address with or without button
             if "," not in addr_str:

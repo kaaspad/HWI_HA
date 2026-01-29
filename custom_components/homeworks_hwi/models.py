@@ -15,6 +15,7 @@ class CCOEntityType(Enum):
     LOCK = auto()
     COVER = auto()
     CLIMATE = auto()
+    FAN = auto()
 
 
 @dataclass

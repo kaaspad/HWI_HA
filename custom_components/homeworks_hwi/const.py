@@ -48,6 +48,7 @@ DEFAULT_KEYPAD_NAME: Final = "Homeworks keypad"
 DEFAULT_LIGHT_NAME: Final = "Homeworks light"
 DEFAULT_CCO_NAME: Final = "Homeworks CCO"
 DEFAULT_COVER_NAME: Final = "Homeworks Cover"
+DEFAULT_FAN_NAME: Final = "Homeworks Fan"
 DEFAULT_LOCK_NAME: Final = "Homeworks Lock"
 DEFAULT_SWITCH_NAME: Final = "Homeworks Switch"
 
@@ -64,6 +65,7 @@ CCO_TYPE_LIGHT: Final = "light"
 CCO_TYPE_COVER: Final = "cover"
 CCO_TYPE_LOCK: Final = "lock"
 CCO_TYPE_CLIMATE: Final = "climate"
+CCO_TYPE_FAN: Final = "fan"
 
 # Event names
 EVENT_BUTTON_PRESS: Final = "homeworks_button_press"

@@ -254,7 +254,7 @@
             },
             "import_csv": {
                 "title": "Import Devices from CSV",
-                "description": "Paste CSV content with columns: device_type, address, relay/button, name.\n\nSupported device_type values: CCO, SWITCH, LIGHT, DIMMER, COVER, LOCK",
+                "description": "Paste CSV content with columns: device_type, address, relay/button, name, type (optional), area (optional).\n\nSupported device_type values: CCO, SWITCH, LIGHT, DIMMER, COVER, LOCK, CLIMATE, FAN\n\nFor CCO/SWITCH rows, use 'type' column to specify: switch, light, cover, lock, climate, fan",
                 "data": {
                     "csv_file": "CSV content"
                 }
@@ -290,7 +290,8 @@
                 "light": "Light (on/off)",
                 "cover": "Cover (open/close)",
                 "lock": "Lock (lock/unlock)",
-                "climate": "Climate (heat on/off)"
+                "climate": "Climate (heat on/off)",
+                "fan": "Fan (on/off)"
             }
         }
     },

@@ -66,6 +66,7 @@ from .const import (
     CONF_RELEASE_DELAY,
     CCO_TYPE_CLIMATE,
     CCO_TYPE_COVER,
+    CCO_TYPE_FAN,
     CCO_TYPE_LIGHT,
     CCO_TYPE_LOCK,
     CCO_TYPE_SWITCH,
@@ -89,6 +90,7 @@ CCO_ENTITY_TYPES = [
     selector.SelectOptionDict(value=CCO_TYPE_COVER, label="cover"),
     selector.SelectOptionDict(value=CCO_TYPE_LOCK, label="lock"),
     selector.SelectOptionDict(value=CCO_TYPE_CLIMATE, label="climate"),
+    selector.SelectOptionDict(value=CCO_TYPE_FAN, label="fan"),
 ]
 
 
@@ -651,7 +653,7 @@ async def async_parse_csv(
                 # Map type column to entity type, default to switch
                 entity_type = cco_type if cco_type in (
                     CCO_TYPE_SWITCH, CCO_TYPE_LIGHT, CCO_TYPE_COVER,
-                    CCO_TYPE_LOCK, CCO_TYPE_CLIMATE
+                    CCO_TYPE_LOCK, CCO_TYPE_CLIMATE, CCO_TYPE_FAN
                 ) else CCO_TYPE_SWITCH
                 devices.append(
                     DeviceImport(
@@ -707,6 +709,18 @@ async def async_parse_csv(
                         button,
                         row.get("name", "").strip(),
                         CCO_TYPE_CLIMATE,
+                        area,
+                    )
+                )
+            elif device_type == "FAN":
+                button = int(row.get("relay", row.get("button", 1)))
+                devices.append(
+                    DeviceImport(
+                        "CCO",
+                        normalize_address(row["address"].strip()),
+                        button,
+                        row.get("name", "").strip(),
+                        CCO_TYPE_FAN,
                         area,
                     )
                 )
