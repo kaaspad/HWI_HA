@@ -102,13 +102,15 @@
                     "addr": "CCO/Keypad address",
                     "button_number": "Button/Relay number",
                     "entity_type": "Device type",
-                    "inverted": "Invert on/off"
+                    "inverted": "Invert on/off",
+                    "area": "Area"
                 },
                 "data_description": {
                     "addr": "Address in format [processor:link:address] (e.g., [02:06:03])",
                     "button_number": "Relay number 1-8 for CCO modules, 1-24 for keypads",
                     "entity_type": "How this device appears in Home Assistant",
-                    "inverted": "Swap on/off semantics (useful for normally-closed relays)"
+                    "inverted": "Swap on/off semantics (useful for normally-closed relays)",
+                    "area": "Assign this device to an area in Home Assistant"
                 }
             },
             "select_edit_cco_device": {
@@ -141,10 +143,12 @@
                 "data": {
                     "name": "Light name",
                     "addr": "Dimmer address",
+                    "area": "Area",
                     "rate": "Fade rate"
                 },
                 "data_description": {
                     "addr": "Dimmer address (varies by type: RPM, D48, H48, RF)",
+                    "area": "Assign this light to an area in Home Assistant",
                     "rate": "Time in seconds to fade to new brightness level"
                 }
             },

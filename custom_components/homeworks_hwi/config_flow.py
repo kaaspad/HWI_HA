@@ -44,6 +44,7 @@ from homeassistant.util import slugify
 
 from .const import (
     CONF_ADDR,
+    CONF_AREA,
     CONF_BUTTON_NUMBER,
     CONF_BUTTONS,
     CONF_CCO_DEVICES,
@@ -811,8 +812,8 @@ LIGHT_EDIT: VolDictType = {
         selector.NumberSelectorConfig(
             min=0,
             max=20,
-            mode=selector.NumberSelectorMode.SLIDER,
-            step=0.1,
+            mode=selector.NumberSelectorMode.BOX,
+            step=0.01,
             unit_of_measurement="s",
         )
     ),
@@ -822,6 +823,7 @@ DATA_SCHEMA_ADD_LIGHT = vol.Schema(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_LIGHT_NAME): selector.TextSelector(),
         vol.Required(CONF_ADDR): selector.TextSelector(),
+        vol.Optional(CONF_AREA): selector.AreaSelector(),
         **LIGHT_EDIT,
     }
 )
@@ -885,6 +887,7 @@ DATA_SCHEMA_ADD_CCO_DEVICE = vol.Schema(
             )
         ),
         vol.Optional(CONF_INVERTED, default=False): selector.BooleanSelector(),
+        vol.Optional(CONF_AREA): selector.AreaSelector(),
     }
 )
 
