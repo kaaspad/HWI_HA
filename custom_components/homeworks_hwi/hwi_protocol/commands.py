@@ -81,6 +81,59 @@ def request_dimmer_level(address: str) -> str:
 
 
 # =============================================================================
+# RPM Motor Cover Commands
+# =============================================================================
+
+
+# RPM motor command values
+RPM_MOTOR_UP = 16
+RPM_MOTOR_STOP = 0
+RPM_MOTOR_DOWN = 35
+
+
+def motor_cover_up(address: str) -> str:
+    """Build command to raise a motor cover.
+
+    Uses DL command with value 16 for up.
+
+    Args:
+        address: Motor address [pp:ll:mi:mo:ou]
+
+    Returns:
+        Command string
+    """
+    return f"FADEDIM, {RPM_MOTOR_UP}, 0, 0, {address}"
+
+
+def motor_cover_down(address: str) -> str:
+    """Build command to lower a motor cover.
+
+    Uses DL command with value 35 for down.
+
+    Args:
+        address: Motor address [pp:ll:mi:mo:ou]
+
+    Returns:
+        Command string
+    """
+    return f"FADEDIM, {RPM_MOTOR_DOWN}, 0, 0, {address}"
+
+
+def motor_cover_stop(address: str) -> str:
+    """Build command to stop a motor cover.
+
+    Uses DL command with value 0 for stop.
+
+    Args:
+        address: Motor address [pp:ll:mi:mo:ou]
+
+    Returns:
+        Command string
+    """
+    return f"FADEDIM, {RPM_MOTOR_STOP}, 0, 0, {address}"
+
+
+# =============================================================================
 # CCO (Contact Closure Output) Commands
 # =============================================================================
 

@@ -67,6 +67,7 @@ from .const import (
     CONF_RATE,
     CONF_RELAY_NUMBER,
     CONF_RELEASE_DELAY,
+    CONF_RPM_COVERS,
     CCO_TYPE_CLIMATE,
     CCO_TYPE_COVER,
     CCO_TYPE_FAN,
@@ -81,6 +82,7 @@ from .const import (
     DEFAULT_KLS_POLL_INTERVAL,
     DEFAULT_KLS_WINDOW_OFFSET,
     DEFAULT_LIGHT_NAME,
+    DEFAULT_RPM_COVER_NAME,
     DOMAIN,
 )
 from .models import CCOAddress, normalize_address
@@ -406,6 +408,108 @@ async def validate_remove_light(
     return {}
 
 
+# === RPM Motor Cover CRUD ===
+
+
+async def validate_add_rpm_cover(
+    handler: SchemaCommonFlowHandler, user_input: dict[str, Any]
+) -> dict[str, Any]:
+    """Validate RPM cover input."""
+    user_input[CONF_ADDR] = _validate_address(user_input[CONF_ADDR])
+
+    for item in handler.options.get(CONF_RPM_COVERS, []):
+        if normalize_address(item[CONF_ADDR]) == user_input[CONF_ADDR]:
+            raise SchemaFlowError("duplicated_addr")
+
+    items = handler.options.setdefault(CONF_RPM_COVERS, [])
+    items.append(user_input)
+    return {}
+
+
+async def get_select_rpm_cover_schema(handler: SchemaCommonFlowHandler) -> vol.Schema:
+    """Return schema for selecting an RPM cover."""
+    covers = handler.options.get(CONF_RPM_COVERS, [])
+    if not covers:
+        raise SchemaFlowError("no_devices")
+
+    return vol.Schema(
+        {
+            vol.Required(CONF_INDEX): vol.In(
+                {
+                    str(i): f"{d.get(CONF_NAME, 'RPM Cover')} ({d[CONF_ADDR]})"
+                    for i, d in enumerate(covers)
+                }
+            )
+        }
+    )
+
+
+async def validate_select_rpm_cover(
+    handler: SchemaCommonFlowHandler, user_input: dict[str, Any]
+) -> dict[str, Any]:
+    """Store RPM cover index."""
+    handler.flow_state["_rpm_idx"] = int(user_input[CONF_INDEX])
+    return {}
+
+
+async def get_edit_rpm_cover_suggested_values(
+    handler: SchemaCommonFlowHandler,
+) -> dict[str, Any]:
+    """Return suggested values for RPM cover editing."""
+    idx = handler.flow_state["_rpm_idx"]
+    return dict(handler.options[CONF_RPM_COVERS][idx])
+
+
+async def validate_rpm_cover_edit(
+    handler: SchemaCommonFlowHandler, user_input: dict[str, Any]
+) -> dict[str, Any]:
+    """Update edited RPM cover."""
+    idx = handler.flow_state["_rpm_idx"]
+    handler.options[CONF_RPM_COVERS][idx].update(user_input)
+    return {}
+
+
+async def get_remove_rpm_cover_schema(handler: SchemaCommonFlowHandler) -> vol.Schema:
+    """Return schema for RPM cover removal."""
+    covers = handler.options.get(CONF_RPM_COVERS, [])
+    if not covers:
+        raise SchemaFlowError("no_devices")
+
+    return vol.Schema(
+        {
+            vol.Required(CONF_INDEX): cv.multi_select(
+                {
+                    str(i): f"{d.get(CONF_NAME, 'RPM Cover')} ({d[CONF_ADDR]})"
+                    for i, d in enumerate(covers)
+                }
+            )
+        }
+    )
+
+
+async def validate_remove_rpm_cover(
+    handler: SchemaCommonFlowHandler, user_input: dict[str, Any]
+) -> dict[str, Any]:
+    """Remove selected RPM covers."""
+    removed = set(user_input[CONF_INDEX])
+    registry = er.async_get(handler.parent_handler.hass)
+
+    new_items = []
+    for i, item in enumerate(handler.options.get(CONF_RPM_COVERS, [])):
+        if str(i) not in removed:
+            new_items.append(item)
+        else:
+            for entity_id in list(registry.entities):
+                entity = registry.entities[entity_id]
+                if entity.platform == DOMAIN and item[CONF_ADDR] in (
+                    entity.unique_id or ""
+                ):
+                    registry.async_remove(entity_id)
+
+    handler.options[CONF_RPM_COVERS] = new_items
+    return {}
+
+
 # === Keypad CRUD ===
 
 
@@ -627,7 +731,7 @@ async def validate_controller_settings(
 class DeviceImport(NamedTuple):
     """Device import from CSV."""
 
-    device_type: str  # CCO, DIMMER, or CCI
+    device_type: str  # CCO, DIMMER, CCI, or MOTOR_COVER
     address: str
     button: int | None  # For CCO/CCI: button/input number
     name: str
@@ -744,6 +848,18 @@ async def async_parse_csv(
                         device_class,
                     )
                 )
+            elif device_type in ("MOTOR_COVER", "RPM_COVER", "RPM"):
+                # RPM motor covers (HW-RPM-4M-230 module)
+                devices.append(
+                    DeviceImport(
+                        "MOTOR_COVER",
+                        normalize_address(row["address"].strip()),
+                        None,  # No button for motor covers
+                        row.get("name", "").strip(),
+                        None,  # entity_type not used for motor covers
+                        area,
+                    )
+                )
     except Exception as err:
         _LOGGER.exception("Error processing CSV")
         raise SchemaFlowError("invalid_csv") from err
@@ -792,6 +908,15 @@ def _is_duplicate_cci(handler: SchemaCommonFlowHandler, address: str, input_numb
     return False
 
 
+def _is_duplicate_rpm_cover(handler: SchemaCommonFlowHandler, address: str) -> bool:
+    """Check if an RPM cover already exists."""
+    normalized = normalize_address(address)
+    for cover in handler.options.get(CONF_RPM_COVERS, []):
+        if normalize_address(cover[CONF_ADDR]) == normalized:
+            return True
+    return False
+
+
 async def get_confirm_import_schema(handler: SchemaCommonFlowHandler) -> vol.Schema:
     """Return schema for confirming imports."""
     devices = handler.flow_state.get("import_devices", [])
@@ -811,6 +936,14 @@ async def get_confirm_import_schema(handler: SchemaCommonFlowHandler) -> vol.Sch
             is_dup = _is_duplicate_cci(handler, dev.address, dev.button or 1)
             device_class = dev.device_class or "input"
             label = f"CCI ({device_class}): {dev.name} ({dev.address}:{dev.button})"
+            if is_dup:
+                label += " [ALREADY EXISTS]"
+            else:
+                default_selected.append(str(idx))
+            selections[str(idx)] = label
+        elif dev.device_type == "MOTOR_COVER":
+            is_dup = _is_duplicate_rpm_cover(handler, dev.address)
+            label = f"Motor Cover: {dev.name} ({dev.address})"
             if is_dup:
                 label += " [ALREADY EXISTS]"
             else:
@@ -881,6 +1014,23 @@ async def validate_confirm_import(
             if device.area:
                 cci_config[CONF_AREA] = device.area
             items.append(cci_config)
+        elif device.device_type == "MOTOR_COVER":
+            # Skip if duplicate
+            if _is_duplicate_rpm_cover(handler, device.address):
+                skipped += 1
+                continue
+            _LOGGER.debug(
+                "Importing motor cover %s",
+                device.name,
+            )
+            items = handler.options.setdefault(CONF_RPM_COVERS, [])
+            rpm_config = {
+                CONF_ADDR: device.address,
+                CONF_NAME: device.name or DEFAULT_RPM_COVER_NAME,
+            }
+            if device.area:
+                rpm_config[CONF_AREA] = device.area
+            items.append(rpm_config)
         else:
             # CCO device
             # Skip if duplicate
@@ -1096,6 +1246,20 @@ DATA_SCHEMA_CONTROLLER_SETTINGS = vol.Schema(
     }
 )
 
+DATA_SCHEMA_ADD_RPM_COVER = vol.Schema(
+    {
+        vol.Optional(CONF_NAME, default=DEFAULT_RPM_COVER_NAME): selector.TextSelector(),
+        vol.Required(CONF_ADDR): selector.TextSelector(),
+        vol.Optional(CONF_AREA): selector.AreaSelector(),
+    }
+)
+
+DATA_SCHEMA_EDIT_RPM_COVER = vol.Schema(
+    {
+        vol.Optional(CONF_NAME): selector.TextSelector(),
+    }
+)
+
 # === Options Flow Definition ===
 
 OPTIONS_FLOW = {
@@ -1103,6 +1267,7 @@ OPTIONS_FLOW = {
         [
             "manage_cco_devices",
             "manage_dimmers",
+            "manage_rpm_covers",
             "manage_keypads",
             "controller_settings",
             "import_csv",
@@ -1146,6 +1311,25 @@ OPTIONS_FLOW = {
     ),
     "remove_light": SchemaFlowFormStep(
         get_remove_light_schema, validate_user_input=validate_remove_light
+    ),
+    "manage_rpm_covers": SchemaFlowMenuStep(
+        ["add_rpm_cover", "select_edit_rpm_cover", "remove_rpm_cover"]
+    ),
+    "add_rpm_cover": SchemaFlowFormStep(
+        DATA_SCHEMA_ADD_RPM_COVER, validate_user_input=validate_add_rpm_cover
+    ),
+    "select_edit_rpm_cover": SchemaFlowFormStep(
+        get_select_rpm_cover_schema,
+        validate_user_input=validate_select_rpm_cover,
+        next_step="edit_rpm_cover",
+    ),
+    "edit_rpm_cover": SchemaFlowFormStep(
+        DATA_SCHEMA_EDIT_RPM_COVER,
+        suggested_values=get_edit_rpm_cover_suggested_values,
+        validate_user_input=validate_rpm_cover_edit,
+    ),
+    "remove_rpm_cover": SchemaFlowFormStep(
+        get_remove_rpm_cover_schema, validate_user_input=validate_remove_rpm_cover
     ),
     "manage_keypads": SchemaFlowMenuStep(
         ["add_keypad", "select_edit_keypad", "remove_keypad"]

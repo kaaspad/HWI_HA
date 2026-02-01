@@ -1,4 +1,4 @@
-"""Support for Lutron Homeworks covers (CCO-based or dimmer-based)."""
+"""Support for Lutron Homeworks covers (CCO-based or RPM motor-based)."""
 
 from __future__ import annotations
 
@@ -28,8 +28,10 @@ from .const import (
     CONF_ENTITY_TYPE,
     CONF_INVERTED,
     CONF_RELAY_NUMBER,
+    CONF_RPM_COVERS,
     CCO_TYPE_COVER,
     DEFAULT_COVER_NAME,
+    DEFAULT_RPM_COVER_NAME,
     DOMAIN,
 )
 from .coordinator import HomeworksCoordinator
@@ -45,7 +47,7 @@ async def async_setup_entry(
     data: HomeworksData = hass.data[DOMAIN][entry.entry_id]
     coordinator = data.coordinator
     controller_id = entry.options[CONF_CONTROLLER_ID]
-    entities: list[HomeworksCCOCover] = []
+    entities: list[HomeworksCCOCover | HomeworksRPMCover] = []
 
     # New-style CCO devices with type=cover
     for device_config in entry.options.get(CONF_CCO_DEVICES, []):
@@ -116,6 +118,21 @@ async def async_setup_entry(
 
         except Exception as err:
             _LOGGER.error("Failed to create legacy cover for %s: %s", cover_config, err)
+
+    # RPM motor covers
+    for rpm_cover_config in entry.options.get(CONF_RPM_COVERS, []):
+        try:
+            addr = normalize_address(rpm_cover_config[CONF_ADDR])
+            entity = HomeworksRPMCover(
+                coordinator=coordinator,
+                controller_id=controller_id,
+                address=addr,
+                name=rpm_cover_config.get(CONF_NAME, DEFAULT_RPM_COVER_NAME),
+                area=rpm_cover_config.get(CONF_AREA),
+            )
+            entities.append(entity)
+        except Exception as err:
+            _LOGGER.error("Failed to create RPM cover for %s: %s", rpm_cover_config, err)
 
     if entities:
         _LOGGER.debug("Adding %d cover entities", len(entities))
@@ -250,3 +267,107 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         await self.coordinator.async_request_keypad_led_states(
             self._device.address.to_kls_address()
         )
+
+
+class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
+    """Homeworks RPM motor-based Cover.
+
+    For HW-RPM-4M-230 and similar motor modules.
+    Uses FADEDIM commands with specific values:
+    - Up: 16
+    - Stop: 0
+    - Down: 35
+
+    Position tracking is not available - we only know if it's moving.
+    """
+
+    _attr_device_class = CoverDeviceClass.SHADE
+    _attr_supported_features = (
+        CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
+    )
+
+    def __init__(
+        self,
+        coordinator: HomeworksCoordinator,
+        controller_id: str,
+        address: str,
+        name: str,
+        area: str | None = None,
+    ) -> None:
+        """Initialize the RPM cover."""
+        super().__init__(coordinator)
+        self._address = address
+        self._controller_id = controller_id
+        self._is_opening = False
+        self._is_closing = False
+
+        self._entity_name = name
+        self._attr_unique_id = f"homeworks.{controller_id}.rpm_cover.{address}.v2"
+        device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{controller_id}.rpm_cover.{address}")},
+            name=name,
+            manufacturer="Lutron",
+            model="HomeWorks RPM Motor Cover",
+        )
+        if area:
+            device_info["suggested_area"] = area
+        self._attr_device_info = device_info
+        self._attr_extra_state_attributes = {
+            "homeworks_address": address,
+        }
+
+    @property
+    def name(self) -> str:
+        """Return the name of the entity."""
+        return self._entity_name
+
+    @property
+    def is_closed(self) -> bool | None:
+        """Return True if the cover is closed.
+
+        For RPM motor covers, we cannot know the exact position.
+        Return None to indicate unknown state.
+        """
+        return None
+
+    @property
+    def is_opening(self) -> bool:
+        """Return True if the cover is opening."""
+        return self._is_opening
+
+    @property
+    def is_closing(self) -> bool:
+        """Return True if the cover is closing."""
+        return self._is_closing
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+    async def async_open_cover(self, **kwargs: Any) -> None:
+        """Open the cover (raise)."""
+        _LOGGER.debug("Opening RPM cover: %s", self._address)
+        self._is_opening = True
+        self._is_closing = False
+        self.async_write_ha_state()
+
+        await self.coordinator.async_motor_cover_up(self._address)
+
+    async def async_close_cover(self, **kwargs: Any) -> None:
+        """Close the cover (lower)."""
+        _LOGGER.debug("Closing RPM cover: %s", self._address)
+        self._is_closing = True
+        self._is_opening = False
+        self.async_write_ha_state()
+
+        await self.coordinator.async_motor_cover_down(self._address)
+
+    async def async_stop_cover(self, **kwargs: Any) -> None:
+        """Stop the cover."""
+        _LOGGER.debug("Stopping RPM cover: %s", self._address)
+        self._is_opening = False
+        self._is_closing = False
+        self.async_write_ha_state()
+
+        await self.coordinator.async_motor_cover_stop(self._address)

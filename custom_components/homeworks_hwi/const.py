@@ -34,6 +34,9 @@ CONF_LED_NUMBER: Final = "led_number"
 # Cover-specific configuration
 CONF_COVERS: Final = "covers"
 
+# RPM Motor Cover configuration
+CONF_RPM_COVERS: Final = "rpm_covers"
+
 # Lock-specific configuration
 CONF_LOCKS: Final = "locks"
 
@@ -53,6 +56,7 @@ DEFAULT_KEYPAD_NAME: Final = "Homeworks keypad"
 DEFAULT_LIGHT_NAME: Final = "Homeworks light"
 DEFAULT_CCO_NAME: Final = "Homeworks CCO"
 DEFAULT_COVER_NAME: Final = "Homeworks Cover"
+DEFAULT_RPM_COVER_NAME: Final = "Homeworks Motor Cover"
 DEFAULT_FAN_NAME: Final = "Homeworks Fan"
 DEFAULT_LOCK_NAME: Final = "Homeworks Lock"
 DEFAULT_SWITCH_NAME: Final = "Homeworks Switch"
@@ -94,3 +98,4 @@ DIAG_CCO_DEVICE_COUNT: Final = "cco_device_count"
 DIAG_CCI_DEVICE_COUNT: Final = "cci_device_count"
 DIAG_DIMMER_COUNT: Final = "dimmer_count"
 DIAG_KEYPAD_COUNT: Final = "keypad_count"
+DIAG_RPM_COVER_COUNT: Final = "rpm_cover_count"

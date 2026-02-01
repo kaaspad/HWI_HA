@@ -571,6 +571,27 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         normalized = normalize_address(address)
         return await self._client.request_dimmer_level(normalized)
 
+    async def async_motor_cover_up(self, address: str) -> bool:
+        """Raise a motor cover (RPM module)."""
+        if not self._client:
+            return False
+        normalized = normalize_address(address)
+        return await self._client.motor_cover_up(normalized)
+
+    async def async_motor_cover_down(self, address: str) -> bool:
+        """Lower a motor cover (RPM module)."""
+        if not self._client:
+            return False
+        normalized = normalize_address(address)
+        return await self._client.motor_cover_down(normalized)
+
+    async def async_motor_cover_stop(self, address: str) -> bool:
+        """Stop a motor cover (RPM module)."""
+        if not self._client:
+            return False
+        normalized = normalize_address(address)
+        return await self._client.motor_cover_stop(normalized)
+
     async def async_keypad_button_press(self, address: str, button: int) -> bool:
         """Simulate a keypad button press."""
         if not self._client:

@@ -323,6 +323,27 @@ class HomeworksClient:
             await asyncio.sleep(self._config.command_delay)
             return result
 
+    async def motor_cover_up(self, address: str) -> bool:
+        """Raise a motor cover (RPM module)."""
+        async with self._command_lock:
+            result = await self._client.motor_cover_up(address)
+            await asyncio.sleep(self._config.command_delay)
+            return result
+
+    async def motor_cover_down(self, address: str) -> bool:
+        """Lower a motor cover (RPM module)."""
+        async with self._command_lock:
+            result = await self._client.motor_cover_down(address)
+            await asyncio.sleep(self._config.command_delay)
+            return result
+
+    async def motor_cover_stop(self, address: str) -> bool:
+        """Stop a motor cover (RPM module)."""
+        async with self._command_lock:
+            result = await self._client.motor_cover_stop(address)
+            await asyncio.sleep(self._config.command_delay)
+            return result
+
     async def keypad_button_press(self, address: str, button: int) -> bool:
         """Simulate keypad button press."""
         async with self._command_lock:

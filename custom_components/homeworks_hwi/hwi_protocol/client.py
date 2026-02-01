@@ -305,6 +305,39 @@ class HomeworksClient:
             commands.cco_pulse(address, relay, duration_seconds)
         )
 
+    async def motor_cover_up(self, address: str) -> bool:
+        """Raise a motor cover (RPM module).
+
+        Args:
+            address: Motor address [pp:ll:mi:mo:ou]
+
+        Returns:
+            True if send succeeded
+        """
+        return await self._transport.write(commands.motor_cover_up(address))
+
+    async def motor_cover_down(self, address: str) -> bool:
+        """Lower a motor cover (RPM module).
+
+        Args:
+            address: Motor address [pp:ll:mi:mo:ou]
+
+        Returns:
+            True if send succeeded
+        """
+        return await self._transport.write(commands.motor_cover_down(address))
+
+    async def motor_cover_stop(self, address: str) -> bool:
+        """Stop a motor cover (RPM module).
+
+        Args:
+            address: Motor address [pp:ll:mi:mo:ou]
+
+        Returns:
+            True if send succeeded
+        """
+        return await self._transport.write(commands.motor_cover_stop(address))
+
     async def request_keypad_led_states(self, address: str) -> bool:
         """Request keypad LED states (RKLS).
 
