@@ -61,6 +61,7 @@
                 "menu_options": {
                     "manage_cco_devices": "Manage CCO devices (switches, lights, covers, locks)",
                     "manage_dimmers": "Manage dimmable lights",
+                    "manage_rpm_covers": "Manage motor covers (RPM)",
                     "manage_keypads": "Manage keypads",
                     "controller_settings": "Controller settings",
                     "import_csv": "Import devices from CSV",
@@ -83,6 +84,47 @@
                     "add_light": "Add dimmable light",
                     "select_edit_light": "Edit dimmable light",
                     "remove_light": "Remove dimmable light"
+                }
+            },
+            "manage_rpm_covers": {
+                "title": "Motor Cover Management",
+                "description": "Motor covers use HW-RPM-4M-230 modules for shades, blinds, and curtains.",
+                "menu_options": {
+                    "add_rpm_cover": "Add motor cover",
+                    "select_edit_rpm_cover": "Edit motor cover",
+                    "remove_rpm_cover": "Remove motor cover"
+                }
+            },
+            "add_rpm_cover": {
+                "title": "Add Motor Cover",
+                "description": "Motor covers use RPM modules and are controlled with Up/Stop/Down commands.",
+                "data": {
+                    "name": "Cover name",
+                    "addr": "Motor address",
+                    "area": "Area"
+                },
+                "data_description": {
+                    "addr": "Address in format [processor:link:module_interface:module:output] (e.g., [02:01:01:06:02])",
+                    "area": "Assign this cover to an area in Home Assistant"
+                }
+            },
+            "select_edit_rpm_cover": {
+                "title": "Select Motor Cover to Edit",
+                "data": {
+                    "index": "Cover"
+                }
+            },
+            "edit_rpm_cover": {
+                "title": "Edit Motor Cover",
+                "data": {
+                    "name": "Cover name"
+                }
+            },
+            "remove_rpm_cover": {
+                "title": "Remove Motor Covers",
+                "description": "Select covers to remove.",
+                "data": {
+                    "index": "Covers to remove"
                 }
             },
             "manage_keypads": {
@@ -254,7 +296,7 @@
             },
             "import_csv": {
                 "title": "Import Devices from CSV",
-                "description": "Paste CSV content with columns: device_type, address, relay/button, name, type (optional), area (optional).\n\nSupported device_type values: CCO, SWITCH, LIGHT, DIMMER, COVER, LOCK, CLIMATE, FAN\n\nFor CCO/SWITCH rows, use 'type' column to specify: switch, light, cover, lock, climate, fan",
+                "description": "Paste CSV content with columns: device_type, address, relay/button, name, type (optional), area (optional).\n\nSupported device_type values: CCO, SWITCH, LIGHT, DIMMER, COVER, LOCK, CLIMATE, FAN, MOTOR_COVER, CCI\n\nFor CCO/SWITCH rows, use 'type' column to specify: switch, light, cover, lock, climate, fan\n\nMOTOR_COVER is for RPM motor covers (shades/blinds/curtains).",
                 "data": {
                     "csv_file": "CSV content"
                 }
