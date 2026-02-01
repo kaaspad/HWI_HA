@@ -748,8 +748,15 @@ async def async_parse_csv(
 ) -> dict[str, Any]:
     """Parse CSV content."""
     content = user_input["csv_file"]
+    # Remove BOM (Byte Order Mark) if present - Excel often adds this
+    if content.startswith('\ufeff'):
+        content = content[1:]
+        _LOGGER.debug("Removed BOM from CSV content")
     f = StringIO(content)
     reader = csv.DictReader(f)
+
+    # Log the field names to help debug column issues
+    _LOGGER.debug("CSV field names: %s", reader.fieldnames)
 
     devices = []
     try:
