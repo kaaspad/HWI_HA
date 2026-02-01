@@ -33,6 +33,7 @@ from homeassistant.exceptions import (
     ServiceValidationError,
 )
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import area_registry as ar
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.typing import ConfigType
@@ -96,6 +97,42 @@ class HomeworksData:
 
     coordinator: HomeworksCoordinator
     controller_id: str
+
+
+def resolve_area_name(hass: HomeAssistant, area_name: str | None) -> str | None:
+    """Resolve an area name to its ID, matching case-insensitively.
+
+    Args:
+        hass: Home Assistant instance
+        area_name: The area name from CSV (e.g., "Living Room")
+
+    Returns:
+        The area ID if found, or the original name if not found.
+        If area doesn't exist, suggested_area will create it with the given name.
+    """
+    if not area_name:
+        return None
+
+    area_registry = ar.async_get(hass)
+    area_name_lower = area_name.lower().strip()
+
+    # Look for exact match first (case-insensitive)
+    for area in area_registry.areas.values():
+        if area.name.lower() == area_name_lower:
+            _LOGGER.debug(
+                "Resolved area '%s' to existing area ID '%s' (name: '%s')",
+                area_name,
+                area.id,
+                area.name,
+            )
+            return area.id
+
+    # No match found - return original name, HA will create the area
+    _LOGGER.debug(
+        "Area '%s' not found in registry, will be created by Home Assistant",
+        area_name,
+    )
+    return area_name
 
 
 @callback

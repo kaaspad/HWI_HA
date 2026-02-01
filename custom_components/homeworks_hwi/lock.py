@@ -13,7 +13,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import HomeworksData
+from . import HomeworksData, resolve_area_name
 from .const import (
     CONF_ADDR,
     CONF_AREA,
@@ -67,7 +67,7 @@ async def async_setup_entry(
                 name=device_config.get(CONF_NAME, DEFAULT_LOCK_NAME),
                 entity_type=CCOEntityType.LOCK,
                 inverted=device_config.get(CONF_INVERTED, False),
-                area=device_config.get(CONF_AREA),
+                area=resolve_area_name(hass, device_config.get(CONF_AREA)),
             )
 
             entity = HomeworksCCOLock(
@@ -99,7 +99,7 @@ async def async_setup_entry(
                 name=lock_config.get(CONF_NAME, DEFAULT_LOCK_NAME),
                 entity_type=CCOEntityType.LOCK,
                 inverted=lock_config.get(CONF_INVERTED, False),
-                area=lock_config.get(CONF_AREA),
+                area=resolve_area_name(hass, lock_config.get(CONF_AREA)),
             )
 
             entity = HomeworksCCOLock(

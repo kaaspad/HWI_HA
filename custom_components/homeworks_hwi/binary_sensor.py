@@ -24,7 +24,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import HomeworksData
+from . import HomeworksData, resolve_area_name
 from .const import (
     CONF_ADDR,
     CONF_AREA,
@@ -108,7 +108,7 @@ async def async_setup_entry(
             input_number = device_config.get(CONF_INPUT_NUMBER, 1)
             name = device_config.get(CONF_NAME, DEFAULT_CCI_NAME)
             device_class_str = device_config.get(CONF_DEVICE_CLASS, None)
-            area = device_config.get(CONF_AREA)
+            area = resolve_area_name(hass, device_config.get(CONF_AREA))
 
             # Map string device class to HA device class
             device_class = DEVICE_CLASS_MAP.get(device_class_str)

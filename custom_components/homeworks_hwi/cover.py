@@ -17,7 +17,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import HomeworksData
+from . import HomeworksData, resolve_area_name
 from .const import (
     CONF_ADDR,
     CONF_AREA,
@@ -73,7 +73,7 @@ async def async_setup_entry(
                 name=device_config.get(CONF_NAME, DEFAULT_COVER_NAME),
                 entity_type=CCOEntityType.COVER,
                 inverted=device_config.get(CONF_INVERTED, False),
-                area=device_config.get(CONF_AREA),
+                area=resolve_area_name(hass, device_config.get(CONF_AREA)),
             )
 
             entity = HomeworksCCOCover(
@@ -106,7 +106,7 @@ async def async_setup_entry(
                 name=cover_config.get(CONF_NAME, DEFAULT_COVER_NAME),
                 entity_type=CCOEntityType.COVER,
                 inverted=cover_config.get(CONF_INVERTED, False),
-                area=cover_config.get(CONF_AREA),
+                area=resolve_area_name(hass, cover_config.get(CONF_AREA)),
             )
 
             entity = HomeworksCCOCover(
@@ -128,7 +128,7 @@ async def async_setup_entry(
                 controller_id=controller_id,
                 address=addr,
                 name=rpm_cover_config.get(CONF_NAME, DEFAULT_RPM_COVER_NAME),
-                area=rpm_cover_config.get(CONF_AREA),
+                area=resolve_area_name(hass, rpm_cover_config.get(CONF_AREA)),
             )
             entities.append(entity)
         except Exception as err:
