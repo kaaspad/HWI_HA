@@ -169,7 +169,8 @@
                     "addr": "CCO/Keypad address",
                     "button_number": "Button/Relay number",
                     "entity_type": "Device type",
-                    "inverted": "Invert on/off"
+                    "inverted": "Invert on/off",
+                    "area": "Area"
                 }
             },
             "remove_cco_device": {

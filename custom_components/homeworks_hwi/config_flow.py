@@ -224,7 +224,7 @@ async def get_edit_cco_device_suggested_values(
     """Return suggested values for CCO device editing."""
     idx = handler.flow_state["_cco_idx"]
     device = handler.options[CONF_CCO_DEVICES][idx]
-    return {
+    values = {
         CONF_NAME: device.get(CONF_NAME, ""),
         CONF_ADDR: device.get(CONF_ADDR, ""),
         CONF_BUTTON_NUMBER: device.get(
@@ -233,6 +233,9 @@ async def get_edit_cco_device_suggested_values(
         CONF_ENTITY_TYPE: device.get(CONF_ENTITY_TYPE, CCO_TYPE_SWITCH),
         CONF_INVERTED: device.get(CONF_INVERTED, False),
     }
+    if device.get(CONF_AREA):
+        values[CONF_AREA] = device.get(CONF_AREA)
+    return values
 
 
 async def validate_cco_device_edit(
@@ -1220,6 +1223,7 @@ DATA_SCHEMA_EDIT_CCO_DEVICE = vol.Schema(
             )
         ),
         vol.Optional(CONF_INVERTED): selector.BooleanSelector(),
+        vol.Optional(CONF_AREA): selector.AreaSelector(),
     }
 )
 
