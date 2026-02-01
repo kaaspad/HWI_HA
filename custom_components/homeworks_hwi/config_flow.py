@@ -757,8 +757,22 @@ async def async_parse_csv(
             device_type = row.get("device_type", "").strip().upper()
             # Get optional entity type for CCO devices (switch/light/cover/lock/climate)
             cco_type = row.get("type", "").strip().lower() or None
-            # Get optional area
-            area = row.get("area", "").strip() or None
+            # Get optional area - check multiple possible column names
+            area = (
+                row.get("area", "").strip()
+                or row.get("Area", "").strip()
+                or row.get("AREA", "").strip()
+                or row.get("zone", "").strip()
+                or row.get("Zone", "").strip()
+            ) or None
+
+            _LOGGER.debug(
+                "CSV row: device_type=%s, name=%s, area=%s, raw_row=%s",
+                device_type,
+                row.get("name", ""),
+                area,
+                dict(row),
+            )
 
             if device_type in ("CCO", "SWITCH"):
                 button = int(row.get("relay", row.get("button", 1)))
@@ -876,48 +890,68 @@ async def async_parse_csv(
 
 def _is_duplicate_cco(handler: SchemaCommonFlowHandler, address: str, button: int) -> bool:
     """Check if a CCO device already exists."""
+    return _find_existing_cco(handler, address, button) is not None
+
+
+def _find_existing_cco(handler: SchemaCommonFlowHandler, address: str, button: int) -> int | None:
+    """Find existing CCO device index, or None if not found."""
     try:
         new_addr = _validate_cco_address(address, button)
-        for device in handler.options.get(CONF_CCO_DEVICES, []):
+        for i, device in enumerate(handler.options.get(CONF_CCO_DEVICES, [])):
             existing_addr = _validate_cco_address(
                 device[CONF_ADDR],
                 device.get(CONF_BUTTON_NUMBER, device.get(CONF_RELAY_NUMBER, 1)),
             )
             if existing_addr.unique_key == new_addr.unique_key:
-                return True
+                return i
     except Exception:
         pass
-    return False
+    return None
 
 
 def _is_duplicate_dimmer(handler: SchemaCommonFlowHandler, address: str) -> bool:
     """Check if a dimmer already exists."""
+    return _find_existing_dimmer(handler, address) is not None
+
+
+def _find_existing_dimmer(handler: SchemaCommonFlowHandler, address: str) -> int | None:
+    """Find existing dimmer index, or None if not found."""
     normalized = normalize_address(address)
-    for dimmer in handler.options.get(CONF_DIMMERS, []):
+    for i, dimmer in enumerate(handler.options.get(CONF_DIMMERS, [])):
         if normalize_address(dimmer[CONF_ADDR]) == normalized:
-            return True
-    return False
+            return i
+    return None
 
 
 def _is_duplicate_cci(handler: SchemaCommonFlowHandler, address: str, input_number: int) -> bool:
     """Check if a CCI device already exists."""
+    return _find_existing_cci(handler, address, input_number) is not None
+
+
+def _find_existing_cci(handler: SchemaCommonFlowHandler, address: str, input_number: int) -> int | None:
+    """Find existing CCI device index, or None if not found."""
     normalized = normalize_address(address)
-    for device in handler.options.get(CONF_CCI_DEVICES, []):
+    for i, device in enumerate(handler.options.get(CONF_CCI_DEVICES, [])):
         if (
             normalize_address(device[CONF_ADDR]) == normalized
             and device.get(CONF_INPUT_NUMBER, 1) == input_number
         ):
-            return True
-    return False
+            return i
+    return None
 
 
 def _is_duplicate_rpm_cover(handler: SchemaCommonFlowHandler, address: str) -> bool:
     """Check if an RPM cover already exists."""
+    return _find_existing_rpm_cover(handler, address) is not None
+
+
+def _find_existing_rpm_cover(handler: SchemaCommonFlowHandler, address: str) -> int | None:
+    """Find existing RPM cover index, or None if not found."""
     normalized = normalize_address(address)
-    for cover in handler.options.get(CONF_RPM_COVERS, []):
+    for i, cover in enumerate(handler.options.get(CONF_RPM_COVERS, [])):
         if normalize_address(cover[CONF_ADDR]) == normalized:
-            return True
-    return False
+            return i
+    return None
 
 
 async def get_confirm_import_schema(handler: SchemaCommonFlowHandler) -> vol.Schema:
@@ -983,8 +1017,17 @@ async def validate_confirm_import(
     for idx in selected:
         device = devices[int(idx)]
         if device.device_type == "DIMMER":
-            # Skip if duplicate
-            if _is_duplicate_dimmer(handler, device.address):
+            # Check if duplicate - if so, update the area instead of skipping
+            existing_idx = _find_existing_dimmer(handler, device.address)
+            if existing_idx is not None:
+                # Update existing dimmer with new area if provided
+                if device.area:
+                    handler.options[CONF_DIMMERS][existing_idx][CONF_AREA] = device.area
+                    _LOGGER.debug(
+                        "Updated existing dimmer %s with area=%s",
+                        device.name,
+                        device.area,
+                    )
                 skipped += 1
                 continue
             items = handler.options.setdefault(CONF_DIMMERS, [])
@@ -997,8 +1040,17 @@ async def validate_confirm_import(
                 dimmer_config[CONF_AREA] = device.area
             items.append(dimmer_config)
         elif device.device_type == "CCI":
-            # Skip if duplicate
-            if _is_duplicate_cci(handler, device.address, device.button or 1):
+            # Check if duplicate - if so, update the area instead of skipping
+            existing_idx = _find_existing_cci(handler, device.address, device.button or 1)
+            if existing_idx is not None:
+                # Update existing CCI with new area if provided
+                if device.area:
+                    handler.options[CONF_CCI_DEVICES][existing_idx][CONF_AREA] = device.area
+                    _LOGGER.debug(
+                        "Updated existing CCI device %s with area=%s",
+                        device.name,
+                        device.area,
+                    )
                 skipped += 1
                 continue
             _LOGGER.debug(
@@ -1018,8 +1070,17 @@ async def validate_confirm_import(
                 cci_config[CONF_AREA] = device.area
             items.append(cci_config)
         elif device.device_type == "MOTOR_COVER":
-            # Skip if duplicate
-            if _is_duplicate_rpm_cover(handler, device.address):
+            # Check if duplicate - if so, update the area instead of skipping
+            existing_idx = _find_existing_rpm_cover(handler, device.address)
+            if existing_idx is not None:
+                # Update existing motor cover with new area if provided
+                if device.area:
+                    handler.options[CONF_RPM_COVERS][existing_idx][CONF_AREA] = device.area
+                    _LOGGER.debug(
+                        "Updated existing motor cover %s with area=%s",
+                        device.name,
+                        device.area,
+                    )
                 skipped += 1
                 continue
             _LOGGER.debug(
@@ -1036,17 +1097,28 @@ async def validate_confirm_import(
             items.append(rpm_config)
         else:
             # CCO device
-            # Skip if duplicate
-            if _is_duplicate_cco(handler, device.address, device.button or 1):
+            # Check if duplicate - if so, update the area instead of skipping
+            existing_idx = _find_existing_cco(handler, device.address, device.button or 1)
+            if existing_idx is not None:
+                # Update existing device with new area if provided
+                if device.area:
+                    handler.options[CONF_CCO_DEVICES][existing_idx][CONF_AREA] = device.area
+                    _LOGGER.debug(
+                        "Updated existing CCO device %s with area=%s",
+                        device.name,
+                        device.area,
+                    )
                 skipped += 1
                 continue
             # Use entity_type from CSV if provided, otherwise default to switch
             entity_type = device.entity_type or CCO_TYPE_SWITCH
             _LOGGER.debug(
-                "Importing CCO device %s with entity_type=%s (from CSV: %s)",
+                "Importing CCO device %s with entity_type=%s, area=%s (from CSV: entity_type=%s, area=%s)",
                 device.name,
                 entity_type,
+                device.area,
                 device.entity_type,
+                device.area,
             )
             items = handler.options.setdefault(CONF_CCO_DEVICES, [])
             cco_config = {
@@ -1058,6 +1130,9 @@ async def validate_confirm_import(
             }
             if device.area:
                 cco_config[CONF_AREA] = device.area
+                _LOGGER.debug("Added area '%s' to CCO device %s", device.area, device.name)
+            else:
+                _LOGGER.warning("No area found for CCO device %s", device.name)
             items.append(cco_config)
 
     return {}

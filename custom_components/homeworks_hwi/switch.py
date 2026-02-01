@@ -70,12 +70,19 @@ async def async_setup_entry(
 
             address = CCOAddress.from_string(full_addr)
 
+            area = device_config.get(CONF_AREA)
+            _LOGGER.debug(
+                "Creating switch %s with area=%s (config=%s)",
+                device_config.get(CONF_NAME),
+                area,
+                device_config,
+            )
             device = CCODevice(
                 address=address,
                 name=device_config.get(CONF_NAME, DEFAULT_SWITCH_NAME),
                 entity_type=CCOEntityType.SWITCH,
                 inverted=device_config.get(CONF_INVERTED, False),
-                area=device_config.get(CONF_AREA),
+                area=area,
             )
 
             entity = HomeworksCCOSwitch(
