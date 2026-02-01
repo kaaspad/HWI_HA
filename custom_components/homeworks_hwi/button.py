@@ -85,7 +85,7 @@ class HomeworksButton(ButtonEntity):
         )
         self._attr_name = button_name
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.{keypad_addr}")},
+            identifiers={(DOMAIN, f"{controller_id}.{keypad_addr}.v2")},
             name=keypad_name,
             manufacturer="Lutron",
             model="HomeWorks Keypad",

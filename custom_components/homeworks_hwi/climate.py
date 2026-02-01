@@ -129,7 +129,7 @@ class HomeworksCCOClimate(CoordinatorEntity[HomeworksCoordinator], ClimateEntity
         self._entity_name = device.name
         self._attr_unique_id = f"homeworks.{controller_id}.climate.{device.unique_id}.v2"
         device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.climate.{device.address}")},
+            identifiers={(DOMAIN, f"{controller_id}.climate.{device.address}.v2")},
             name=device.name,
             manufacturer="Lutron",
             model="HomeWorks CCO Climate",

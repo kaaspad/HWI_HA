@@ -132,7 +132,7 @@ class HomeworksDimmableLight(CoordinatorEntity[HomeworksCoordinator], LightEntit
         self._entity_name = name
         self._attr_unique_id = f"homeworks.{controller_id}.light.{self._addr}.v2"
         device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.{self._addr}")},
+            identifiers={(DOMAIN, f"{controller_id}.{self._addr}.v2")},
             name=name,
             manufacturer="Lutron",
             model="HomeWorks Dimmer",
@@ -219,7 +219,7 @@ class HomeworksCCOLight(CoordinatorEntity[HomeworksCoordinator], LightEntity):
         self._entity_name = device.name
         self._attr_unique_id = f"homeworks.{controller_id}.ccolight.{device.unique_id}.v2"
         device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.ccolight.{device.address}")},
+            identifiers={(DOMAIN, f"{controller_id}.ccolight.{device.address}.v2")},
             name=device.name,
             manufacturer="Lutron",
             model="HomeWorks CCO Light",

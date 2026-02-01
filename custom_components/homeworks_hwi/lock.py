@@ -141,7 +141,7 @@ class HomeworksCCOLock(CoordinatorEntity[HomeworksCoordinator], LockEntity):
         self._entity_name = device.name
         self._attr_unique_id = f"homeworks.{controller_id}.lock.{device.unique_id}.v2"
         device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.lock.{device.address}")},
+            identifiers={(DOMAIN, f"{controller_id}.lock.{device.address}.v2")},
             name=device.name,
             manufacturer="Lutron",
             model="HomeWorks Lock",

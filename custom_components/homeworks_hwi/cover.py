@@ -169,7 +169,7 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         self._entity_name = device.name
         self._attr_unique_id = f"homeworks.{controller_id}.cover.{device.unique_id}.v2"
         device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.cover.{device.address}")},
+            identifiers={(DOMAIN, f"{controller_id}.cover.{device.address}.v2")},
             name=device.name,
             manufacturer="Lutron",
             model="HomeWorks Cover",
@@ -304,7 +304,7 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         self._entity_name = name
         self._attr_unique_id = f"homeworks.{controller_id}.rpm_cover.{address}.v2"
         device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.rpm_cover.{address}")},
+            identifiers={(DOMAIN, f"{controller_id}.rpm_cover.{address}.v2")},
             name=name,
             manufacturer="Lutron",
             model="HomeWorks RPM Motor Cover",

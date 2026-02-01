@@ -161,7 +161,7 @@ class HomeworksLEDBinarySensor(
         )
         self._attr_name = button_name
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.{keypad_addr}")},
+            identifiers={(DOMAIN, f"{controller_id}.{keypad_addr}.v2")},
             name=keypad_name,
             manufacturer="Lutron",
             model="HomeWorks Keypad",
@@ -232,7 +232,7 @@ class HomeworksCCIBinarySensor(
         self._attr_unique_id = f"homeworks.{controller_id}.cci.{addr_clean}_{input_number}.v2"
         self._attr_device_class = device_class
         device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.cci.{self._address}_{input_number}")},
+            identifiers={(DOMAIN, f"{controller_id}.cci.{self._address}_{input_number}.v2")},
             name=name,
             manufacturer="Lutron",
             model="HomeWorks CCI Input",

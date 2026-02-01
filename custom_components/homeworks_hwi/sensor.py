@@ -61,7 +61,7 @@ class HomeworksHealthSensor(CoordinatorEntity[HomeworksCoordinator], SensorEntit
         self._attr_unique_id = f"homeworks.{controller_id}.health.{sensor_type}.v2"
         self._attr_name = name
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.controller")},
+            identifiers={(DOMAIN, f"{controller_id}.controller.v2")},
             name=f"Homeworks Controller ({controller_id})",
             manufacturer="Lutron",
             model="HomeWorks Interactive",

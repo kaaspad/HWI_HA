@@ -168,7 +168,7 @@ class HomeworksCCOSwitch(CoordinatorEntity[HomeworksCoordinator], SwitchEntity):
         self._entity_name = device.name
         self._attr_unique_id = f"homeworks.{controller_id}.cco.{device.unique_id}.v2"
         device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{controller_id}.cco.{device.address}")},
+            identifiers={(DOMAIN, f"{controller_id}.cco.{device.address}.v2")},
             name=device.name,
             manufacturer="Lutron",
             model="HomeWorks CCO",
