@@ -100,11 +100,17 @@ class HomeworksData:
 
 
 def resolve_area_name(hass: HomeAssistant, area_name: str | None) -> str | None:
-    """Resolve an area name to its ID, matching case-insensitively.
+    """Resolve an area name to its ID, matching flexibly.
+
+    Tries multiple matching strategies:
+    1. Exact name match (case-insensitive)
+    2. Area ID match (case-insensitive)
+    3. Underscore-to-space conversion (e.g., "living_room" matches "Living Room")
+    4. Space-to-underscore conversion (e.g., "Living Room" matches area ID "living_room")
 
     Args:
         hass: Home Assistant instance
-        area_name: The area name from CSV (e.g., "Living Room")
+        area_name: The area name from CSV (e.g., "Living Room" or "living_room")
 
     Returns:
         The area ID if found, or the original name if not found.
@@ -114,16 +120,50 @@ def resolve_area_name(hass: HomeAssistant, area_name: str | None) -> str | None:
         return None
 
     area_registry = ar.async_get(hass)
-    area_name_lower = area_name.lower().strip()
+    area_name_clean = area_name.strip()
+    area_name_lower = area_name_clean.lower()
 
-    # Look for exact match first (case-insensitive)
+    # Also try with underscores replaced by spaces and vice versa
+    area_name_spaces = area_name_lower.replace("_", " ")
+    area_name_underscores = area_name_lower.replace(" ", "_")
+
     for area in area_registry.areas.values():
-        if area.name.lower() == area_name_lower:
+        area_name_check = area.name.lower()
+        area_id_check = area.id.lower()
+
+        # Match against area name (case-insensitive)
+        if area_name_check == area_name_lower:
             _LOGGER.debug(
-                "Resolved area '%s' to existing area ID '%s' (name: '%s')",
+                "Resolved area '%s' to ID '%s' (exact name match)",
                 area_name,
                 area.id,
-                area.name,
+            )
+            return area.id
+
+        # Match against area ID (case-insensitive)
+        if area_id_check == area_name_lower:
+            _LOGGER.debug(
+                "Resolved area '%s' to ID '%s' (ID match)",
+                area_name,
+                area.id,
+            )
+            return area.id
+
+        # Match with underscores converted to spaces (e.g., "living_room" -> "living room")
+        if area_name_check == area_name_spaces:
+            _LOGGER.debug(
+                "Resolved area '%s' to ID '%s' (underscore-to-space match)",
+                area_name,
+                area.id,
+            )
+            return area.id
+
+        # Match with spaces converted to underscores (e.g., "Living Room" -> "living_room")
+        if area_id_check == area_name_underscores:
+            _LOGGER.debug(
+                "Resolved area '%s' to ID '%s' (space-to-underscore match)",
+                area_name,
+                area.id,
             )
             return area.id
 
