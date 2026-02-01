@@ -1,8 +1,12 @@
 """Support for Lutron Homeworks binary sensors.
 
 This module provides:
-- Keypad LED binary sensors (existing)
-- CCI (Contact Closure Input) binary sensors (new)
+- Keypad LED binary sensors
+- CCI (Contact Closure Input) binary sensors
+
+CCI devices emulate keypads. When the physical key is:
+- Turned to ON position: KBP then KBH (hold) = state is ON/closed
+- Turned to OFF position: KBR (release) = state is OFF/open
 """
 
 from __future__ import annotations

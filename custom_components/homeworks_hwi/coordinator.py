@@ -18,7 +18,6 @@ from .client import (
     HW_BUTTON_HOLD,
     HW_BUTTON_PRESSED,
     HW_BUTTON_RELEASED,
-    HW_CCI_CHANGED,
     HW_CONNECTION_LOST,
     HW_CONNECTION_RESTORED,
     HW_KEYPAD_LED_CHANGED,
@@ -342,12 +341,14 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._dispatch_button_event(values[0], values[1], "pressed")
         elif msg_type == HW_BUTTON_RELEASED:
             self._dispatch_button_event(values[0], values[1], "released")
+            # CCI devices use KBR (release) to indicate OFF state
+            self._handle_cci_button_event(values[0], values[1], False)
         elif msg_type == HW_BUTTON_HOLD:
             self._dispatch_button_event(values[0], values[1], "hold")
+            # CCI devices use KBH (hold) to indicate ON state
+            self._handle_cci_button_event(values[0], values[1], True)
         elif msg_type == HW_BUTTON_DOUBLE_TAP:
             self._dispatch_button_event(values[0], values[1], "double_tap")
-        elif msg_type == HW_CCI_CHANGED:
-            self._handle_cci_update(values[0], values[1], values[2])
         elif msg_type == HW_CONNECTION_LOST:
             _LOGGER.warning("Controller connection lost")
         elif msg_type == HW_CONNECTION_RESTORED:
@@ -462,10 +463,20 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except Exception as err:
                 _LOGGER.error("Button callback error: %s", err)
 
-    def _handle_cci_update(
-        self, address: str, input_number: int, state: bool
+    def _handle_cci_button_event(
+        self, address: str, button: int, state: bool
     ) -> None:
-        """Handle a CCI (Contact Closure Input) state change."""
+        """Handle a CCI state change from button event.
+
+        CCIs emulate keypads. When the physical key is:
+        - Turned to ON: KBP then KBH (hold) = state is ON/closed
+        - Turned to OFF: KBR (release) = state is OFF/open
+
+        Args:
+            address: Keypad/CCI address
+            button: Button number (1-24)
+            state: True for KBH (on), False for KBR (off)
+        """
         normalized = normalize_address(address)
 
         # Parse the address to get processor/link/address
@@ -475,18 +486,22 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             link = int(parts[1])
             addr = int(parts[2])
         except (ValueError, IndexError):
-            _LOGGER.warning("Failed to parse CCI address: %s", normalized)
-            return
+            return  # Not a valid CCI address format
 
-        key = (processor, link, addr, input_number)
+        # Check if this is a registered CCI device
+        key = (processor, link, addr, button)
+        if key not in self._cci_devices:
+            return  # Not a CCI device, ignore
+
         old_state = self._cci_states.get(key)
 
         _LOGGER.debug(
-            "CCI %s input %d: %s -> %s",
+            "CCI %s button %d: %s -> %s (from %s event)",
             normalized,
-            input_number,
-            "CLOSED" if old_state else "OPEN",
-            "CLOSED" if state else "OPEN",
+            button,
+            "ON" if old_state else "OFF",
+            "ON" if state else "OFF",
+            "KBH" if state else "KBR",
         )
 
         if old_state != state:

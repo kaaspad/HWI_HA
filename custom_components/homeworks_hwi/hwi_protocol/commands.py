@@ -313,34 +313,6 @@ def request_sivoia_scene(address: str) -> str:
 
 
 # =============================================================================
-# CCI (Contact Closure Input) Commands
-# =============================================================================
-
-
-def request_cci_state(address: str, input_number: int) -> str:
-    """Build RCCI (Request CCI State) command.
-
-    Args:
-        address: CCI address [pp:ll:aa]
-        input_number: Input number 1-8
-
-    Returns:
-        Command string
-    """
-    return f"RCCI, {address}, {input_number}"
-
-
-def enable_cci_monitoring() -> str:
-    """Build CCIMON command."""
-    return "CCIMON"
-
-
-def disable_cci_monitoring() -> str:
-    """Build CCIMOFF command."""
-    return "CCIMOFF"
-
-
-# =============================================================================
 # Monitoring Commands
 # =============================================================================
 
