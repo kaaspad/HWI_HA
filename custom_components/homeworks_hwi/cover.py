@@ -269,6 +269,12 @@ class HomeworksCCOCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         )
 
 
+# RPM motor command values (from FADEDIM)
+RPM_MOTOR_UP = 16
+RPM_MOTOR_DOWN = 35
+RPM_MOTOR_STOP = 0
+
+
 class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
     """Homeworks RPM motor-based Cover.
 
@@ -278,7 +284,10 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
     - Stop: 0
     - Down: 35
 
-    Position tracking is not available - we only know if it's moving.
+    State tracking uses RDL (Request Dimmer Level) to get the last commanded value:
+    - Level 16 = last command was "up" → cover is open/opening
+    - Level 35 = last command was "down" → cover is closed/closing
+    - Level 0 = last command was "stop" → position unknown
     """
 
     _attr_device_class = CoverDeviceClass.SHADE
@@ -298,8 +307,6 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         super().__init__(coordinator)
         self._address = address
         self._controller_id = controller_id
-        self._is_opening = False
-        self._is_closing = False
 
         self._entity_name = name
         self._attr_unique_id = f"homeworks.{controller_id}.rpm_cover.{address}.v2"
@@ -322,23 +329,48 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         return self._entity_name
 
     @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes."""
+        level = self.coordinator.get_dimmer_level(self._address)
+        level_name = {
+            RPM_MOTOR_UP: "up",
+            RPM_MOTOR_DOWN: "down",
+            RPM_MOTOR_STOP: "stopped",
+        }.get(level, f"unknown ({level})")
+        return {
+            "homeworks_address": self._address,
+            "motor_level": level,
+            "motor_state": level_name,
+        }
+
+    @property
     def is_closed(self) -> bool | None:
         """Return True if the cover is closed.
 
-        For RPM motor covers, we cannot know the exact position.
-        Return None to indicate unknown state.
+        Uses RDL feedback to determine state:
+        - Level 35 (down command) = closed
+        - Level 16 (up command) = open
+        - Level 0 (stop command) = unknown
         """
-        return None
+        level = self.coordinator.get_dimmer_level(self._address)
+        if level == RPM_MOTOR_DOWN:
+            return True  # Last command was "down" → closed
+        elif level == RPM_MOTOR_UP:
+            return False  # Last command was "up" → open
+        else:
+            return None  # Stop or unknown → position unknown
 
     @property
     def is_opening(self) -> bool:
         """Return True if the cover is opening."""
-        return self._is_opening
+        level = self.coordinator.get_dimmer_level(self._address)
+        return level == RPM_MOTOR_UP
 
     @property
     def is_closing(self) -> bool:
         """Return True if the cover is closing."""
-        return self._is_closing
+        level = self.coordinator.get_dimmer_level(self._address)
+        return level == RPM_MOTOR_DOWN
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -348,26 +380,27 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover (raise)."""
         _LOGGER.debug("Opening RPM cover: %s", self._address)
-        self._is_opening = True
-        self._is_closing = False
-        self.async_write_ha_state()
-
         await self.coordinator.async_motor_cover_up(self._address)
+        self.async_write_ha_state()
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover (lower)."""
         _LOGGER.debug("Closing RPM cover: %s", self._address)
-        self._is_closing = True
-        self._is_opening = False
-        self.async_write_ha_state()
-
         await self.coordinator.async_motor_cover_down(self._address)
+        self.async_write_ha_state()
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
         _LOGGER.debug("Stopping RPM cover: %s", self._address)
-        self._is_opening = False
-        self._is_closing = False
+        await self.coordinator.async_motor_cover_stop(self._address)
         self.async_write_ha_state()
 
-        await self.coordinator.async_motor_cover_stop(self._address)
+    async def async_added_to_hass(self) -> None:
+        """Register with coordinator when added to hass."""
+        await super().async_added_to_hass()
+
+        # Register as a dimmer to receive DL (dimmer level) updates
+        self.coordinator.register_dimmer(self._address)
+
+        # Request initial state
+        await self.coordinator.async_request_dimmer_level(self._address)

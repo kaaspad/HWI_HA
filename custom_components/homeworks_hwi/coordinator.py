@@ -41,6 +41,11 @@ DEFAULT_KLS_POLL_INTERVAL = timedelta(seconds=10)
 # Default polling interval for dimmer state
 DEFAULT_DIMMER_POLL_INTERVAL = timedelta(seconds=30)
 
+# RPM motor command values (for optimistic state updates)
+RPM_MOTOR_UP = 16
+RPM_MOTOR_DOWN = 35
+RPM_MOTOR_STOP = 0
+
 
 class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator for Homeworks data updates.
@@ -591,21 +596,36 @@ class HomeworksCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if not self._client:
             return False
         normalized = normalize_address(address)
-        return await self._client.motor_cover_up(normalized)
+        result = await self._client.motor_cover_up(normalized)
+        if result:
+            # Optimistically update the dimmer state
+            self._dimmer_states[normalized] = RPM_MOTOR_UP
+            self.async_set_updated_data({"motor_cover_update": normalized})
+        return result
 
     async def async_motor_cover_down(self, address: str) -> bool:
         """Lower a motor cover (RPM module)."""
         if not self._client:
             return False
         normalized = normalize_address(address)
-        return await self._client.motor_cover_down(normalized)
+        result = await self._client.motor_cover_down(normalized)
+        if result:
+            # Optimistically update the dimmer state
+            self._dimmer_states[normalized] = RPM_MOTOR_DOWN
+            self.async_set_updated_data({"motor_cover_update": normalized})
+        return result
 
     async def async_motor_cover_stop(self, address: str) -> bool:
         """Stop a motor cover (RPM module)."""
         if not self._client:
             return False
         normalized = normalize_address(address)
-        return await self._client.motor_cover_stop(normalized)
+        result = await self._client.motor_cover_stop(normalized)
+        if result:
+            # Optimistically update the dimmer state
+            self._dimmer_states[normalized] = RPM_MOTOR_STOP
+            self.async_set_updated_data({"motor_cover_update": normalized})
+        return result
 
     async def async_keypad_button_press(self, address: str, button: int) -> bool:
         """Simulate a keypad button press."""
