@@ -167,12 +167,22 @@ def resolve_area_name(hass: HomeAssistant, area_name: str | None) -> str | None:
             )
             return area.id
 
-    # No match found - return original name, HA will create the area
+    # No match found - convert to friendly name for HA to create
+    # If it looks like a slug (has underscores, no spaces), convert to Title Case
+    if "_" in area_name_clean and " " not in area_name_clean:
+        friendly_name = area_name_clean.replace("_", " ").title()
+        _LOGGER.debug(
+            "Area '%s' not found, will create as '%s'",
+            area_name,
+            friendly_name,
+        )
+        return friendly_name
+
     _LOGGER.debug(
         "Area '%s' not found in registry, will be created by Home Assistant",
         area_name,
     )
-    return area_name
+    return area_name_clean
 
 
 @callback
