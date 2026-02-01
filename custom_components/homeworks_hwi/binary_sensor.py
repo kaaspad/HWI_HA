@@ -27,6 +27,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import HomeworksData
 from .const import (
     CONF_ADDR,
+    CONF_AREA,
     CONF_BUTTONS,
     CONF_CCI_DEVICES,
     CONF_CONTROLLER_ID,
@@ -107,6 +108,7 @@ async def async_setup_entry(
             input_number = device_config.get(CONF_INPUT_NUMBER, 1)
             name = device_config.get(CONF_NAME, DEFAULT_CCI_NAME)
             device_class_str = device_config.get(CONF_DEVICE_CLASS, None)
+            area = device_config.get(CONF_AREA)
 
             # Map string device class to HA device class
             device_class = DEVICE_CLASS_MAP.get(device_class_str)
@@ -118,6 +120,7 @@ async def async_setup_entry(
                 input_number=input_number,
                 name=name,
                 device_class=device_class,
+                area=area,
             )
             entities.append(entity)
 
@@ -213,6 +216,7 @@ class HomeworksCCIBinarySensor(
         input_number: int,
         name: str,
         device_class: BinarySensorDeviceClass | None,
+        area: str | None = None,
     ) -> None:
         """Initialize the CCI binary sensor."""
         super().__init__(coordinator)
@@ -227,12 +231,15 @@ class HomeworksCCIBinarySensor(
         addr_clean = self._address.replace(":", "_").strip("[]")
         self._attr_unique_id = f"homeworks.{controller_id}.cci.{addr_clean}_{input_number}.v2"
         self._attr_device_class = device_class
-        self._attr_device_info = DeviceInfo(
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{controller_id}.cci.{self._address}_{input_number}")},
             name=name,
             manufacturer="Lutron",
             model="HomeWorks CCI Input",
         )
+        if area:
+            device_info["suggested_area"] = area
+        self._attr_device_info = device_info
         self._attr_extra_state_attributes = {
             "homeworks_address": self._address,
             "input_number": input_number,
