@@ -15,6 +15,7 @@ from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import HomeworksData, resolve_area_name
@@ -274,8 +275,11 @@ RPM_MOTOR_UP = 16
 RPM_MOTOR_DOWN = 35
 RPM_MOTOR_STOP = 0
 
+# Attribute key for storing last known position
+ATTR_LAST_KNOWN_POSITION = "last_known_position"
 
-class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
+
+class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity, RestoreEntity):
     """Homeworks RPM motor-based Cover.
 
     For HW-RPM-4M-230 and similar motor modules.
@@ -287,7 +291,9 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
     State tracking uses RDL (Request Dimmer Level) to get the last commanded value:
     - Level 16 = last command was "up" → cover is open/opening
     - Level 35 = last command was "down" → cover is closed/closing
-    - Level 0 = last command was "stop" → position unknown
+    - Level 0 = last command was "stop" → use last known position
+
+    The last known position is persisted across HA restarts using RestoreEntity.
     """
 
     _attr_device_class = CoverDeviceClass.SHADE
@@ -307,6 +313,8 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         super().__init__(coordinator)
         self._address = address
         self._controller_id = controller_id
+        # Last known position: True=closed, False=open, None=unknown
+        self._last_known_closed: bool | None = None
 
         self._entity_name = name
         self._attr_unique_id = f"homeworks.{controller_id}.rpm_cover.{address}.v2"
@@ -319,9 +327,6 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         if area:
             device_info["suggested_area"] = area
         self._attr_device_info = device_info
-        self._attr_extra_state_attributes = {
-            "homeworks_address": address,
-        }
 
     @property
     def name(self) -> str:
@@ -341,6 +346,11 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
             "homeworks_address": self._address,
             "motor_level": level,
             "motor_state": level_name,
+            ATTR_LAST_KNOWN_POSITION: (
+                "closed" if self._last_known_closed is True
+                else "open" if self._last_known_closed is False
+                else "unknown"
+            ),
         }
 
     @property
@@ -350,15 +360,20 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         Uses RDL feedback to determine state:
         - Level 35 (down command) = closed
         - Level 16 (up command) = open
-        - Level 0 (stop command) = unknown
+        - Level 0 (stop command) = use last known position
         """
         level = self.coordinator.get_dimmer_level(self._address)
         if level == RPM_MOTOR_DOWN:
-            return True  # Last command was "down" → closed
+            # Update last known position
+            self._last_known_closed = True
+            return True
         elif level == RPM_MOTOR_UP:
-            return False  # Last command was "up" → open
+            # Update last known position
+            self._last_known_closed = False
+            return False
         else:
-            return None  # Stop or unknown → position unknown
+            # Stopped or unknown - use last known position
+            return self._last_known_closed
 
     @property
     def is_opening(self) -> bool:
@@ -375,23 +390,33 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        # Update last known position based on current level
+        level = self.coordinator.get_dimmer_level(self._address)
+        if level == RPM_MOTOR_DOWN:
+            self._last_known_closed = True
+        elif level == RPM_MOTOR_UP:
+            self._last_known_closed = False
+        # If stopped (0), keep the previous last_known_closed value
         self.async_write_ha_state()
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover (raise)."""
         _LOGGER.debug("Opening RPM cover: %s", self._address)
+        self._last_known_closed = False  # Optimistically update
         await self.coordinator.async_motor_cover_up(self._address)
         self.async_write_ha_state()
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover (lower)."""
         _LOGGER.debug("Closing RPM cover: %s", self._address)
+        self._last_known_closed = True  # Optimistically update
         await self.coordinator.async_motor_cover_down(self._address)
         self.async_write_ha_state()
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
         _LOGGER.debug("Stopping RPM cover: %s", self._address)
+        # Don't change last_known_closed - keep the last known position
         await self.coordinator.async_motor_cover_stop(self._address)
         self.async_write_ha_state()
 
@@ -399,8 +424,17 @@ class HomeworksRPMCover(CoordinatorEntity[HomeworksCoordinator], CoverEntity):
         """Register with coordinator when added to hass."""
         await super().async_added_to_hass()
 
+        # Restore last known position from previous state
+        if (last_state := await self.async_get_last_state()) is not None:
+            if last_state.attributes.get(ATTR_LAST_KNOWN_POSITION) == "closed":
+                self._last_known_closed = True
+                _LOGGER.debug("Restored %s last position: closed", self._entity_name)
+            elif last_state.attributes.get(ATTR_LAST_KNOWN_POSITION) == "open":
+                self._last_known_closed = False
+                _LOGGER.debug("Restored %s last position: open", self._entity_name)
+
         # Register as a dimmer to receive DL (dimmer level) updates
         self.coordinator.register_dimmer(self._address)
 
-        # Request initial state
+        # Request initial state from controller
         await self.coordinator.async_request_dimmer_level(self._address)
