@@ -332,11 +332,10 @@ def _cleanup_devices_without_areas(hass: HomeAssistant, entry: ConfigEntry) -> N
     device_registry = dr.async_get(hass)
     devices_to_remove = []
 
-    for device_entry in list(device_registry.devices.values()):
-        # Only process devices for this config entry
-        if entry.entry_id not in device_entry.config_entries:
-            continue
-
+    # Only process devices for this config entry
+    for device_entry in dr.async_entries_for_config_entry(
+        device_registry, entry.entry_id
+    ):
         # Check if it's one of our domain's devices
         is_our_device = any(
             identifier[0] == DOMAIN for identifier in device_entry.identifiers
@@ -559,10 +558,10 @@ async def _assign_areas_to_devices(
 
     # Now iterate through all devices and assign areas
     updated_count = 0
-    for device_entry in device_registry.devices.values():
-        # Only process devices for this config entry
-        if entry.entry_id not in device_entry.config_entries:
-            continue
+    # Only process devices for this config entry
+    for device_entry in dr.async_entries_for_config_entry(
+        device_registry, entry.entry_id
+    ):
 
         # Check each identifier
         for identifier in device_entry.identifiers:
