@@ -1,12 +1,12 @@
-"""Tests for the pyhomeworks protocol layer.
+"""Tests for the protocol layer the integration ships (hwi_protocol).
 
 These tests run WITHOUT Home Assistant dependencies.
 """
 
 import pytest
 
-# Direct imports from pyhomeworks package (no HA deps)
-from pyhomeworks import (
+# Direct imports from the integration's hwi_protocol package (no HA deps)
+from hwi_protocol import (
     MessageParser,
     normalize_address,
     parse_address,
@@ -19,7 +19,7 @@ from pyhomeworks import (
     SivoiaSceneMessage,
     UnknownMessage,
 )
-from pyhomeworks import commands
+from hwi_protocol import commands
 
 
 class TestNormalizeAddress:
@@ -189,23 +189,23 @@ class TestKLSButtonWindow:
     Button N (1-8) is at index 9 + (N-1).
     """
 
-    def test_button_6_sample_1_is_off(self):
-        """KLS, [02:06:03], 000000000222112110000000 -> button 6 = OFF"""
+    def test_button_6_sample_1_is_on(self):
+        """KLS, [02:06:03], 000000000222112110000000 -> button 6 = ON"""
         parser = MessageParser()
         data = b"KLS, [02:06:03], 000000000222112110000000\r\n"
         msg = parser.feed(data)[0]
 
-        # Button 6: index = 9 + 5 = 14, digit = 2 = OFF
-        assert msg.get_cco_relay_state(6) is False
+        # Button 6: index = 9 + 5 = 14, digit = 2 = ON
+        assert msg.get_cco_relay_state(6) is True
 
-    def test_button_6_sample_2_is_on(self):
-        """KLS, [02:06:03], 000000000222111110000000 -> button 6 = ON"""
+    def test_button_6_sample_2_is_off(self):
+        """KLS, [02:06:03], 000000000222111110000000 -> button 6 = OFF"""
         parser = MessageParser()
         data = b"KLS, [02:06:03], 000000000222111110000000\r\n"
         msg = parser.feed(data)[0]
 
-        # Button 6: index = 9 + 5 = 14, digit = 1 = ON
-        assert msg.get_cco_relay_state(6) is True
+        # Button 6: index = 9 + 5 = 14, digit = 1 = OFF
+        assert msg.get_cco_relay_state(6) is False
 
     def test_all_8_buttons_sample_1(self):
         """Verify all 8 button states in sample 1."""
@@ -213,9 +213,9 @@ class TestKLSButtonWindow:
         data = b"KLS, [02:06:03], 000000000222112110000000\r\n"
         msg = parser.feed(data)[0]
 
-        # Window: 22211211
-        expected = {1: False, 2: False, 3: False, 4: True,
-                    5: True, 6: False, 7: True, 8: True}
+        # Window: 22211211 (2 = ON, 1 = OFF)
+        expected = {1: True, 2: True, 3: True, 4: False,
+                    5: False, 6: True, 7: False, 8: False}
 
         for button, expected_state in expected.items():
             assert msg.get_cco_relay_state(button) == expected_state, \
@@ -227,9 +227,9 @@ class TestKLSButtonWindow:
         data = b"KLS, [02:06:03], 000000000222111110000000\r\n"
         msg = parser.feed(data)[0]
 
-        # Window: 22211111
-        expected = {1: False, 2: False, 3: False, 4: True,
-                    5: True, 6: True, 7: True, 8: True}
+        # Window: 22211111 (2 = ON, 1 = OFF)
+        expected = {1: True, 2: True, 3: True, 4: False,
+                    5: False, 6: False, 7: False, 8: False}
 
         for button, expected_state in expected.items():
             assert msg.get_cco_relay_state(button) == expected_state

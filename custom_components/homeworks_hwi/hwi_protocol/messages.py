@@ -127,15 +127,15 @@ class KLSMessage(HomeworksMessage):
             window_offset: 0-indexed start of the 8-button window (default: 9)
 
         Returns:
-            True if relay is closed/ON (digit value is 1)
-            False if relay is open/OFF (digit value is 2, or any other value)
+            True if relay is closed/ON (digit value is 2)
+            False if relay is open/OFF (digit value is 1, or any other value)
 
         Example:
             For KLS string "000000000222112110000000":
-            - Relay 6 → index = 9 + (6-1) = 14 → digit '2' → False (OFF)
+            - Relay 6 → index = 9 + (6-1) = 14 → digit '2' → True (ON)
 
             For KLS string "000000000222111110000000":
-            - Relay 6 → index = 9 + (6-1) = 14 → digit '1' → True (ON)
+            - Relay 6 → index = 9 + (6-1) = 14 → digit '1' → False (OFF)
         """
         if not (1 <= relay <= CCO_BUTTON_WINDOW_LENGTH):
             return False
@@ -148,8 +148,9 @@ class KLSMessage(HomeworksMessage):
         if index >= len(self.led_states):
             return False
 
-        # 1 = ON (relay closed), anything else = OFF
-        return self.led_states[index] == 1
+        # 2 = ON (relay closed), 1 = OFF (relay open). Same rule as
+        # KLSState.get_cco_state and CCODevice.interpret_state in models.py.
+        return self.led_states[index] == 2
 
 
 @dataclass(frozen=True)

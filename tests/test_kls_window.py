@@ -6,10 +6,10 @@ within the 24-digit KLS string.
 The button window is at 0-indexed positions 9-16 (1-indexed positions 10-17).
 For button N (1-8), read from index = 9 + (N-1).
 
-Digit semantics:
-    1 = ON (relay closed)
-    2 = OFF (relay open)
-    0, 3 = OFF (unknown/flash)
+Digit semantics (confirmed against a live controller, 2026-01-29):
+    2 = ON (relay closed)
+    1 = OFF (relay open)
+    0, 3 = OFF (unused/flash)
 """
 
 import pytest
@@ -22,7 +22,7 @@ from models import (
     CCOEntityType,
     CCO_BUTTON_WINDOW_OFFSET,
 )
-from pyhomeworks import KLSMessage, MessageParser
+from hwi_protocol import KLSMessage, MessageParser
 
 
 class TestButtonWindowExtraction:
@@ -48,10 +48,10 @@ class TestButtonWindowExtraction:
 class TestSampleKLSLines:
     """Test with the exact sample KLS lines from the protocol."""
 
-    def test_sample_1_button_6_off(self):
+    def test_sample_1_button_6_on(self):
         """
         KLS, [02:06:03], 000000000222112110000000
-        Button 6 = index 14 = digit '2' = OFF
+        Button 6 = index 14 = digit '2' = ON
         """
         kls_string = "000000000222112110000000"
         led_states = [int(c) for c in kls_string]
@@ -61,12 +61,12 @@ class TestSampleKLSLines:
         assert led_states[14] == 2
 
         # Verify interpreted state
-        assert kls.get_cco_state(6) is False
+        assert kls.get_cco_state(6) is True
 
-    def test_sample_2_button_6_on(self):
+    def test_sample_2_button_6_off(self):
         """
         KLS, [02:06:03], 000000000222111110000000
-        Button 6 = index 14 = digit '1' = ON
+        Button 6 = index 14 = digit '1' = OFF
         """
         kls_string = "000000000222111110000000"
         led_states = [int(c) for c in kls_string]
@@ -76,26 +76,26 @@ class TestSampleKLSLines:
         assert led_states[14] == 1
 
         # Verify interpreted state
-        assert kls.get_cco_state(6) is True
+        assert kls.get_cco_state(6) is False
 
     def test_sample_1_all_buttons(self):
         """
         Window: 22211211
-        Button states: OFF, OFF, OFF, ON, ON, OFF, ON, ON
+        Button states: ON, ON, ON, OFF, OFF, ON, OFF, OFF
         """
         kls_string = "000000000222112110000000"
         led_states = [int(c) for c in kls_string]
         kls = KLSState(address="[02:06:03]", led_states=led_states)
 
         expected = {
-            1: False,  # index 9, digit 2
-            2: False,  # index 10, digit 2
-            3: False,  # index 11, digit 2
-            4: True,   # index 12, digit 1
-            5: True,   # index 13, digit 1
-            6: False,  # index 14, digit 2
-            7: True,   # index 15, digit 1
-            8: True,   # index 16, digit 1
+            1: True,   # index 9, digit 2
+            2: True,   # index 10, digit 2
+            3: True,   # index 11, digit 2
+            4: False,  # index 12, digit 1
+            5: False,  # index 13, digit 1
+            6: True,   # index 14, digit 2
+            7: False,  # index 15, digit 1
+            8: False,  # index 16, digit 1
         }
 
         for button, expected_state in expected.items():
@@ -106,15 +106,15 @@ class TestSampleKLSLines:
     def test_sample_2_all_buttons(self):
         """
         Window: 22211111
-        Button states: OFF, OFF, OFF, ON, ON, ON, ON, ON
+        Button states: ON, ON, ON, OFF, OFF, OFF, OFF, OFF
         """
         kls_string = "000000000222111110000000"
         led_states = [int(c) for c in kls_string]
         kls = KLSState(address="[02:06:03]", led_states=led_states)
 
         expected = {
-            1: False, 2: False, 3: False, 4: True,
-            5: True, 6: True, 7: True, 8: True,
+            1: True, 2: True, 3: True, 4: False,
+            5: False, 6: False, 7: False, 8: False,
         }
 
         for button, expected_state in expected.items():
@@ -132,7 +132,7 @@ class TestMessageParserKLS:
         assert len(messages) == 1
         msg = messages[0]
         assert isinstance(msg, KLSMessage)
-        assert msg.get_cco_relay_state(6) is False
+        assert msg.get_cco_relay_state(6) is True
 
     def test_parse_sample_2(self):
         parser = MessageParser()
@@ -140,7 +140,7 @@ class TestMessageParserKLS:
         messages = parser.feed(data)
 
         msg = messages[0]
-        assert msg.get_cco_relay_state(6) is True
+        assert msg.get_cco_relay_state(6) is False
 
 
 class TestCCODeviceInterpretation:
@@ -155,7 +155,7 @@ class TestCCODeviceInterpretation:
         )
 
         # Sample 1: button 6 digit = 2
-        assert device.interpret_state(2) is False
+        assert device.interpret_state(2) is True
 
     def test_normal_device_sample_2(self):
         device = CCODevice(
@@ -166,7 +166,7 @@ class TestCCODeviceInterpretation:
         )
 
         # Sample 2: button 6 digit = 1
-        assert device.interpret_state(1) is True
+        assert device.interpret_state(1) is False
 
     def test_inverted_device_sample_1(self):
         device = CCODevice(
@@ -176,8 +176,8 @@ class TestCCODeviceInterpretation:
             inverted=True,
         )
 
-        # Sample 1: button 6 digit = 2, inverted = ON
-        assert device.interpret_state(2) is True
+        # Sample 1: button 6 digit = 2, inverted = OFF
+        assert device.interpret_state(2) is False
 
     def test_inverted_device_sample_2(self):
         device = CCODevice(
@@ -187,8 +187,8 @@ class TestCCODeviceInterpretation:
             inverted=True,
         )
 
-        # Sample 2: button 6 digit = 1, inverted = OFF
-        assert device.interpret_state(1) is False
+        # Sample 2: button 6 digit = 1, inverted = ON
+        assert device.interpret_state(1) is True
 
 
 class TestPartialFrames:
@@ -203,7 +203,7 @@ class TestPartialFrames:
         messages = parser.feed(b"000222112110000000\r\n")
 
         assert len(messages) == 1
-        assert messages[0].get_cco_relay_state(6) is False
+        assert messages[0].get_cco_relay_state(6) is True
 
     def test_combined_messages(self):
         parser = MessageParser()
@@ -214,8 +214,8 @@ class TestPartialFrames:
         messages = parser.feed(data)
 
         assert len(messages) == 2
-        assert messages[0].get_cco_relay_state(6) is False
-        assert messages[1].get_cco_relay_state(6) is True
+        assert messages[0].get_cco_relay_state(6) is True
+        assert messages[1].get_cco_relay_state(6) is False
 
 
 class TestEdgeCases:
@@ -234,11 +234,17 @@ class TestEdgeCases:
         for button in range(1, 9):
             assert kls.get_cco_state(button) is False
 
-    def test_window_all_ones_means_on(self):
-        led_states = [0] * 9 + [1] * 8 + [0] * 7
+    def test_window_all_twos_means_on(self):
+        led_states = [0] * 9 + [2] * 8 + [0] * 7
         kls = KLSState(address="[02:06:03]", led_states=led_states)
         for button in range(1, 9):
             assert kls.get_cco_state(button) is True
+
+    def test_window_all_ones_means_off(self):
+        led_states = [0] * 9 + [1] * 8 + [0] * 7
+        kls = KLSState(address="[02:06:03]", led_states=led_states)
+        for button in range(1, 9):
+            assert kls.get_cco_state(button) is False
 
     def test_digit_3_flash2_means_off(self):
         led_states = [0] * 9 + [3] * 8 + [0] * 7
