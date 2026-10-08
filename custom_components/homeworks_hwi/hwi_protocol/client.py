@@ -34,6 +34,14 @@ RECONNECT_DELAY_MIN = 1.0
 RECONNECT_DELAY_MAX = 60.0
 RECONNECT_DELAY_MULTIPLIER = 2.0
 
+# Force a reconnect if the controller sends nothing for this long. The
+# coordinator sends RKLS for every KLS address each kls_poll_interval (30s since
+# 2026-09-11, was 10s) and monitoring is enabled, so a link this quiet is not
+# idle -- it is wedged. Keep this at >= 6 poll rounds if the interval changes.
+# TCP keepalive cannot catch this case: when the peer stops answering but keeps
+# the socket open, the connection stays perfectly healthy to the kernel.
+STALL_TIMEOUT = 180.0
+
 # Callback type
 MessageCallback = Callable[[AnyMessage], None]
 
@@ -83,6 +91,7 @@ class HomeworksClient:
         # Health metrics
         self._connected_at: datetime | None = None
         self._last_message_at: datetime | None = None
+        self._last_rx_at: datetime | None = None
         self._reconnect_count = 0
         self._message_count = 0
 
@@ -158,6 +167,7 @@ class HomeworksClient:
             await self._transport.connect()
             await self._subscribe()
             self._connected_at = datetime.now()
+            self._last_rx_at = datetime.now()
             self._reconnect_delay = RECONNECT_DELAY_MIN
             return True
         except HomeworksException as err:
@@ -172,10 +182,22 @@ class HomeworksClient:
                     await self._transport.connect()
                     await self._subscribe()
                     self._connected_at = datetime.now()
+                    self._last_rx_at = datetime.now()
                     self._reconnect_delay = RECONNECT_DELAY_MIN
                     _LOGGER.info("Connected to controller")
-                except HomeworksException as err:
+                except asyncio.CancelledError:
+                    raise
+                except (HomeworksException, OSError) as err:
                     _LOGGER.warning("Connection failed: %s", err)
+                    if self._running:
+                        await asyncio.sleep(self._reconnect_delay)
+                        self._reconnect_delay = min(
+                            self._reconnect_delay * RECONNECT_DELAY_MULTIPLIER,
+                            RECONNECT_DELAY_MAX,
+                        )
+                    continue
+                except Exception:  # noqa: BLE001
+                    _LOGGER.exception("Unexpected error connecting, will retry")
                     if self._running:
                         await asyncio.sleep(self._reconnect_delay)
                         self._reconnect_delay = min(
@@ -187,6 +209,7 @@ class HomeworksClient:
             try:
                 data = await self._transport.read(timeout=1.0)
                 if data:
+                    self._last_rx_at = datetime.now()
                     messages = self._parser.feed(data)
                     for msg in messages:
                         self._message_count += 1
@@ -196,13 +219,41 @@ class HomeworksClient:
                                 self._callback(msg)
                             except Exception:  # noqa: BLE001
                                 _LOGGER.exception("Callback error")
-            except HomeworksConnectionLost:
-                _LOGGER.warning("Connection lost, will reconnect")
+                elif self._stalled():
+                    raise HomeworksConnectionLost(
+                        f"No data from controller for {STALL_TIMEOUT:.0f}s"
+                    )
+            except asyncio.CancelledError:
+                raise
+            except HomeworksException as err:
+                _LOGGER.warning("Connection lost (%s), will reconnect", err)
                 self._reconnect_count += 1
                 self._parser.reset()
                 await self._transport.close()
                 if self._running:
                     await asyncio.sleep(self._reconnect_delay)
+            except Exception:  # noqa: BLE001
+                # Safety net. An exception escaping here used to terminate the
+                # read task permanently while _running stayed True, so nothing
+                # ever reconnected (2026-09-08: OSError EHOSTUNREACH).
+                _LOGGER.exception("Unexpected error in read loop, will reconnect")
+                self._reconnect_count += 1
+                self._parser.reset()
+                await self._transport.close()
+                if self._running:
+                    await asyncio.sleep(self._reconnect_delay)
+
+    def _stalled(self) -> bool:
+        """Return True if the link has been silent past STALL_TIMEOUT.
+
+        Guards the failure mode neither the OSError handling nor TCP keepalive
+        covers: the controller keeps the TCP session open but stops responding,
+        so reads just time out forever against a socket the kernel considers
+        healthy.
+        """
+        if not self._transport.connected or self._last_rx_at is None:
+            return False
+        return (datetime.now() - self._last_rx_at).total_seconds() > STALL_TIMEOUT
 
     async def _subscribe(self) -> None:
         """Subscribe to monitoring events."""

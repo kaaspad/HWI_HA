@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 
 from .exceptions import (
     HomeworksConnectionFailed,
@@ -109,6 +110,7 @@ class HomeworksTransport:
             ) from err
 
         _LOGGER.info("Connected to %s:%s", self._host, self._port)
+        self._enable_keepalive()
 
         # Check for login prompt
         await asyncio.sleep(LOGIN_PROMPT_WAIT)
@@ -123,6 +125,28 @@ class HomeworksTransport:
 
         self._connected = True
 
+    def _enable_keepalive(self) -> None:
+        """Enable TCP keepalive on the open socket.
+
+        Without this, a controller that drops off the network without sending
+        RST leaves a half-open socket: read() simply times out forever and the
+        client keeps believing it is connected.
+        """
+        sock = self._writer.get_extra_info("socket") if self._writer else None
+        if sock is None:
+            return
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            for name, value in (
+                ("TCP_KEEPIDLE", 60),
+                ("TCP_KEEPINTVL", 15),
+                ("TCP_KEEPCNT", 4),
+            ):
+                if hasattr(socket, name):
+                    sock.setsockopt(socket.IPPROTO_TCP, getattr(socket, name), value)
+        except OSError as err:
+            _LOGGER.debug("Could not enable TCP keepalive: %s", err)
+
     async def _read_available(self) -> bytes:
         """Read available data without blocking."""
         if not self._reader:
@@ -135,6 +159,9 @@ class HomeworksTransport:
             )
         except asyncio.TimeoutError:
             return b""
+        except OSError as err:
+            self._connected = False
+            raise HomeworksConnectionLost(f"Read failed: {err}") from err
 
     async def _handle_login(self) -> None:
         """Handle login sequence.
@@ -211,6 +238,9 @@ class HomeworksTransport:
             return data
         except asyncio.TimeoutError:
             return b""
+        except OSError as err:
+            self._connected = False
+            raise HomeworksConnectionLost(f"Read failed: {err}") from err
 
     async def close(self) -> None:
         """Close the connection."""
